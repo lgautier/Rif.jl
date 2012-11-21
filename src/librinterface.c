@@ -3,7 +3,7 @@
 #include <strings.h>
 #include <R.h>
 #include <Rembedded.h>
-#include <Rinternals.h>
+#include <Rdefines.h>
 
 /* char *initargv[]= {"JuliaEmbeddedR", "--verbose"}; */
 typedef struct {
@@ -195,6 +195,7 @@ Sexp_typeof(const SEXP sexp) {
   return res;
 }
 
+/* Return NULL on failure */
 SEXP
 Sexp_evalPromise(const SEXP sexp) {
   if (TYPEOF(sexp) != PROMSXP) {
@@ -210,6 +211,153 @@ Sexp_evalPromise(const SEXP sexp) {
 }
 
 /* Return NULL on failure */
+char* SexpStrVector_getitem(const SEXP sexp, int i) {
+  if (TYPEOF(sexp) != STRSXP) {
+    printf("Not an R vector of type STRSXP.\n");
+    return NULL;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return NULL;
+  }
+  char *res;
+  SEXP sexp_item = STRING_ELT(sexp, (R_len_t)i);
+  cetype_t encoding = Rf_getCharCE(sexp_item);
+  switch (encoding) {
+  case CE_UTF8:
+    res = translateCharUTF8(sexp_item);
+    break;
+  default:
+    res = CHAR(sexp_item);
+    break;
+  }
+  return res;
+} 
+
+/* Return -1 on failure */
+int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
+  if (TYPEOF(sexp) != STRSXP) {
+    printf("Not an R vector of type STRSXP.\n");
+    return -1;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return -1;
+  }
+  SEXP newstring = mkChar(item);
+  SET_STRING_ELT(sexp, (R_len_t)i, newstring);
+  return 0;
+} 
+
+/* Return 0 on failure (should be NaN) */
+#define RINTERF_GETITEM(rpointer, sexptype)		\
+  if (TYPEOF(sexp) != sexptype) {			\
+    printf("Not an R vector of type #sexptype.\n");	\
+    /*FIXME: return int or NULL ?*/			\
+    return 0;						\
+  }							\
+  if (i >= LENGTH(sexp)) {				\
+    printf("Out-of-bound.\n");				\
+    /*FIXME: return int or NULL ?*/			\
+    return 0;						\
+  }							\
+  int res = INTEGER_POINTER(sexp)[i];			\
+				 return res;		\
+
+int SexpDoubleVector_getitem(const SEXP sexp, int i) {
+  RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
+}
+
+#define RINTERF_SETNUMITEM(rpointer, sexptype)		\
+  if (TYPEOF(sexp) != sexptype) {			\
+    printf("Not an R vector of type #sexptype.\n");	\
+    /*FIXME: return int or NULL ?*/			\
+    return -1;						\
+  }							\
+  if (i >= LENGTH(sexp)) {				\
+    printf("Out-of-bound.\n");				\
+    /*FIXME: return int or NULL ?*/			\
+    return -1;						\
+  }							\
+  rpointer(sexp)[i] = value;				\
+		return 0;				\
+
+
+int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
+  RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
+}
+
+SEXP
+SexpIntVector_new(int *v, int n) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready ready.\n");
+    return NULL;
+  }
+  SEXP sexp = NEW_INTEGER(n);
+  if (sexp == NULL) {
+    printf("Problem while creating R vector.\n");
+    return sexp;
+  }
+  PROTECT(sexp);
+  int *sexp_p = INTEGER_POINTER(sexp);
+  int i;
+  for (i = 0; i < n; i++) {
+    sexp_p[i] = v[i];
+  }
+  R_PreserveObject(sexp);
+  UNPROTECT(1);
+  return sexp;
+}
+
+int*
+SexpIntVector_ptr(SEXP sexp) {
+  return INTEGER_POINTER(sexp); 
+}
+	
+/* Return 0 on failure (should be NaN) */
+int
+SexpIntVector_getitem(const SEXP sexp, int i) {
+  if (TYPEOF(sexp) != INTSXP) {
+    printf("Not an R vector of type INTSXP.\n");
+    /*FIXME: return int or NULL ?*/
+    return 0;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return 0;
+  }
+  int res = INTEGER_POINTER(sexp)[i];
+  return res;
+} 
+
+/* Return -1 on failure */
+int SexpIntVector_setitem(const SEXP sexp, int i, int value) {
+  if (TYPEOF(sexp) != INTSXP) {
+    printf("Not an R vector of type INTSXP.\n");
+    /*FIXME: return int or NULL ?*/
+    return -1;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return -1;
+  }
+  INTEGER_POINTER(sexp)[i] = value;
+  return 0;
+} 
+
+SEXP Promise_eval(SEXP sexp) {
+  SEXP res, env;
+  PROTECT(env = PRENV(sexp));
+  PROTECT(res = eval(sexp, env));
+  UNPROTECT(1);
+  return res;
+}
+
+/* Return NULL on failure */
 SEXP
 Environment_get(const SEXP envir, const char* symbol) {
   if (! RINTERF_ISREADY()) {
@@ -217,11 +365,19 @@ Environment_get(const SEXP envir, const char* symbol) {
     return NULL;
   }
   RStatus ^= RINTERF_IDLE;
-  SEXP sexp = findVar(install(symbol), envir);
+  SEXP sexp, sexp_ok;
+  PROTECT(sexp = findVar(install(symbol), envir));
+  if (TYPEOF(sexp) == PROMSXP) {
+    sexp_ok = Promise_eval(sexp);
+    UNPROTECT(1);
+  } else {
+    sexp_ok = sexp;
+  }
   //FIXME: protect/unprotect from garbage collection (for now protect only)
-  R_PreserveObject(sexp);
+  R_PreserveObject(sexp_ok);
+  UNPROTECT(1);
   RStatus ^= RINTERF_IDLE;
-  return sexp;
+  return sexp_ok;
 }
 
 /* Return NULL on failure */
@@ -239,21 +395,51 @@ EmbeddedR_getGlobalEnv(void) {
   return sexp;  
 }
 
-/* Build an R call.*/
+/* R call.*/
+SEXP
+Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
 
-/* SEXP */
-/* callR(SEXP fun_R) { */
-/*   SEXP c_R, call_R; */
-/*   int protect_count = 0; */
+  int protect_count = 0;
 
-/*   /\* FIXME: check that fun_R is a function ? *\/ */
+  /*FIXME: check that fun_R is a function ? */
 
-/*   PROTECT(c_R = call_R = allocList(nparams+1)); */
-/*   protect_count++; */
-/*   SET_TYPEOF(call_R, LANGSXP); */
-/*   SETCAR(c_R, fun_R); */
-/*   c_R = CDR(c_R); */
-
-/*   UNPROTECT(protect_count); */
-/* } */
-
+  SEXP s, t;
+  PROTECT(t = s = allocList(argc+1));
+  protect_count++;
+  SET_TYPEOF(s, LANGSXP);
+  SETCAR(t, fun_R);
+  t = CDR(t);
+  int arg_i;
+  char *arg_name;
+  for (arg_i = 0; arg_i < argc; arg_i++) {
+    printf("  arg %i\n", arg_i);
+    SETCAR(t, argv[arg_i]);
+    printf("    CAR is set\n");
+    arg_name = argn[arg_i];
+    if (strlen(arg_name) > 0) {
+      printf("    Setting name %s\n", arg_name);
+      SET_TAG(t, install((char *)(arg_name)));
+    }
+    printf("    CDR moved\n");
+    t = CDR(t);
+  }
+  int errorOccurred = 0;
+  SEXP res_R;
+  printf("Calling R.\n");
+  PROTECT(res_R = R_tryEval(s, env, &errorOccurred));
+  protect_count++;
+  printf("  done.\n");
+  SEXP res_ok;
+  if (TYPEOF(res_R) == PROMSXP) {
+    res_ok = Promise_eval(res_R);
+  } else {
+    res_ok = res_R;
+  }
+  if (errorOccurred) {
+    res_R = R_NilValue;
+  } else {
+    R_PreserveObject(res_ok);
+  }
+  UNPROTECT(protect_count);
+  return res_ok;
+}
