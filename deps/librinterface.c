@@ -260,10 +260,12 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
   return 0;
 } 
 
+#define STRINGIFY(x) #x
+
 /* Return 0 on failure (should be NaN) */
 #define RINTERF_GETITEM(rpointer, sexptype)		\
   if (TYPEOF(sexp) != sexptype) {			\
-    printf("Not an R vector of type #sexptype.\n");	\
+  printf("Not an R vector of type %s.\n", STRINGIFY(sexptype)); \
     /*FIXME: return int or NULL ?*/			\
     return 0;						\
   }							\
@@ -280,7 +282,7 @@ double SexpDoubleVector_getitem(const SEXP sexp, int i) {
 }
 
 int SexpIntVector_getitem(const SEXP sexp, int i) {
-  RINTERF_GETITEM(INTEGER_POINTER, REALSXP)
+  RINTERF_GETITEM(INTEGER_POINTER, INTSXP)
 }
 
 int SexpBoolVector_getitem(const SEXP sexp, int i) {
@@ -289,7 +291,7 @@ int SexpBoolVector_getitem(const SEXP sexp, int i) {
 
 #define RINTERF_SETNUMITEM(rpointer, sexptype)		\
   if (TYPEOF(sexp) != sexptype) {			\
-    printf("Not an R vector of type "#sexptype".\n");	\
+    printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
     /*FIXME: return int or NULL ?*/			\
     return -1;						\
   }							\
@@ -335,6 +337,30 @@ SexpDoubleVector_new(double *v, int n) {
   UNPROTECT(1);
   return sexp;
 }
+
+SEXP
+SexpStrVector_new(char **v, int n) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready ready.\n");
+    return NULL;
+  }
+  SEXP sexp = NEW_CHARACTER(n);
+  if (sexp == NULL) {
+    printf("Problem while creating R vector.\n");
+    return sexp;
+  }
+  PROTECT(sexp);
+  SEXP str_R;
+  int i;
+  for (i = 0; i < n; i++) {
+    str_R = mkChar(v[i]);
+    SET_STRING_ELT(sexp, i, str_R);
+  }
+  R_PreserveObject(sexp);
+  UNPROTECT(1);
+  return sexp;
+}
+
 
 SEXP
 SexpIntVector_new(int *v, int n) {

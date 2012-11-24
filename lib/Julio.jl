@@ -6,10 +6,11 @@ import Base.assign, Base.ref, Base.convert, Base.length
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
-       RArrayInt32, RArrayFloat, RArrayStr,
+       RArrayInt32, RArrayFloat64, RArrayStr,
+       ref,
        getGlobalEnv
 
-libri = dlopen("./src/librinterface")
+libri = dlopen("./deps/librinterface")
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
@@ -147,21 +148,21 @@ end
 
 
 macro librinterface_getitem(returntype, classname, x, i)
-    local f = $("$(classname)_getitem")
+    local f = "$(classname)_getitem"
     quote
-        local res = ccall(dlsym(libri, $f), $returntype,
-                          (Ptr{Void}, Int32),
-                          $x.sexp, $i)
-        local_res = int32(1)
-        if res == C_NULL
-            error("Error while getting element ", $i, ".")
-        end
-        return res
+       local res = ccall(dlsym(libri, $f), $returntype,
+                         (Ptr{Void}, Int32),
+                         $x.sexp, $i)
+       if res == C_NULL
+           error("Error while getting element ", $i, ".")
+       end
+       res
     end
 end
 
-function ref(x::RArrayInt32, i::Integer)
-    @librinterface_getitem Int32 SexpIntVector x i
+function ref(x::RArrayInt32, i::Int32)
+    res = @librinterface_getitem Int32 SexpIntVector x i
+    return res
 end
 
 #function convert
@@ -178,21 +179,26 @@ function assign(x::RArrayInt32, val::Int32, i::Int32)
     end
 end
 
-type RArrayFloat <: SexpArray
+type RArrayFloat64 <: SexpArray
     sexp::Ptr{Void}
-    function RArrayFloat(c_ptr::Ptr{Void})
+    function RArrayFloat64(c_ptr::Ptr{Void})
         if _rtype(c_ptr) != REALSXP
             error("Incompatible type.")
         end
         new(c_ptr)
     end
-    function RArrayFloat(v::Vector{Int32})
+    function RArrayFloat64(v::Vector{Float64})
         c_ptr = ccall(dlsym(libri, :SexpDoubleVector_new), Ptr{Void},
                       (Ptr{Float64}, Int32),
                       v, length(v))
         new(c_ptr)
     end
 end    
+
+function ref(x::RArrayFloat64, i::Int32)
+    res = @librinterface_getitem Float64 SexpDoubleVector x i
+    return res
+end
 
 
 type RArrayStr <: SexpArray
@@ -217,15 +223,11 @@ end
 ##     return res
 ## end
 
-function ref(x::RArrayStr, i::Integer)
-    res = ccall(dlsym(libri, :SexpStrVector_getitem), Ptr{Uint8},
-                (Ptr{Void}, Int32),
-                x.sexp, i)
-    if res == C_NULL
-        error("Error while getting element ", i, ".")
-    end
-    return bytestring(res)
+function ref(x::RArrayStr, i::Int32)
+    res = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
+    bytestring(res)
 end
+
 
 function assign(x::RArrayStr, val::ASCIIString, i::Integer)
     res = ccall(dlsym(libri, :SexpStrVector_setitem), Int32,
