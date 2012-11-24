@@ -7,7 +7,7 @@ import Base.assign, Base.ref, Base.convert, Base.length
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArrayInt32, RArrayFloat64, RArrayStr,
-       ref,
+       ref, assign,
        getGlobalEnv
 
 libri = dlopen("./deps/librinterface")
@@ -160,6 +160,19 @@ macro librinterface_getitem(returntype, classname, x, i)
     end
 end
 
+macro librinterface_setitem(valuetype, classname, x, i, value)
+    local f = "$(classname)_setitem"
+    quote
+       local res = ccall(dlsym(libri, $f), Int32,
+                         (Ptr{Void}, Int32, $valuetype),
+                         $x.sexp, $i, $value)
+       if res == -1
+           error("Error while setting element ", $i, ".")
+       end
+       res
+    end
+end
+
 function ref(x::RArrayInt32, i::Int32)
     res = @librinterface_getitem Int32 SexpIntVector x i
     return res
@@ -169,14 +182,10 @@ end
 #    c_ptr = ccall(dlsym(libri, :SexpIntVector_ptr), Ptr{Int32},
 #                  (Ptr{Void},),
 #                  res.sexp)
-    
+
 function assign(x::RArrayInt32, val::Int32, i::Int32)
-    res = ccall(dlsym(libri, :SexpIntVector_setitem), Int32,
-                (Ptr{Void}, Int32, Int32),
-                x.sexp, i, val)
-    if res == -1
-        error("Error while assigning integer.")
-    end
+    res = @librinterface_setitem Int32 SexpIntVector x i val
+    return res
 end
 
 type RArrayFloat64 <: SexpArray
@@ -197,6 +206,11 @@ end
 
 function ref(x::RArrayFloat64, i::Int32)
     res = @librinterface_getitem Float64 SexpDoubleVector x i
+    return res
+end
+
+function assign(x::RArrayFloat64, val::Float64, i::Int32)
+    res = @librinterface_setitem Float64 SexpIntVector x i val
     return res
 end
 
@@ -228,14 +242,9 @@ function ref(x::RArrayStr, i::Int32)
     bytestring(res)
 end
 
-
-function assign(x::RArrayStr, val::ASCIIString, i::Integer)
-    res = ccall(dlsym(libri, :SexpStrVector_setitem), Int32,
-                (Ptr{Void}, Int32, Ptr{Uint8}),
-                x.sexp, i, val)
-    if res == -1
-        error("Error while assigning string.")
-    end
+function assign(x::RArrayStr, val::ASCIIString, i::Int32)
+    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
+    return res
 end
 
 type REnvironment <: Sexp
