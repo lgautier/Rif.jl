@@ -195,6 +195,15 @@ Sexp_typeof(const SEXP sexp) {
   return res;
 }
 
+int
+Sexp_length(const SEXP sexp) {
+  if (! RINTERF_ISREADY()) {
+    return -1;
+  }
+  int res = LENGTH(sexp);
+  return res;
+}
+
 /* Return NULL on failure */
 SEXP
 Sexp_evalPromise(const SEXP sexp) {
@@ -263,16 +272,24 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
     /*FIXME: return int or NULL ?*/			\
     return 0;						\
   }							\
-  int res = INTEGER_POINTER(sexp)[i];			\
-				 return res;		\
+  int res = rpointer(sexp)[i];				\
+			  return res;			\
 
-int SexpDoubleVector_getitem(const SEXP sexp, int i) {
+double SexpDoubleVector_getitem(const SEXP sexp, int i) {
   RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
+}
+
+int SexpIntVector_getitem(const SEXP sexp, int i) {
+  RINTERF_GETITEM(INTEGER_POINTER, REALSXP)
+}
+
+int SexpBoolVector_getitem(const SEXP sexp, int i) {
+  RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP)
 }
 
 #define RINTERF_SETNUMITEM(rpointer, sexptype)		\
   if (TYPEOF(sexp) != sexptype) {			\
-    printf("Not an R vector of type #sexptype.\n");	\
+    printf("Not an R vector of type "#sexptype".\n");	\
     /*FIXME: return int or NULL ?*/			\
     return -1;						\
   }							\
@@ -287,6 +304,36 @@ int SexpDoubleVector_getitem(const SEXP sexp, int i) {
 
 int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
+}
+
+int SexpIntVector_setitem(const SEXP sexp, int i, int value) {
+  RINTERF_SETNUMITEM(INTEGER_POINTER, INTSXP)
+}
+
+int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
+  RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
+}
+
+SEXP
+SexpDoubleVector_new(double *v, int n) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready ready.\n");
+    return NULL;
+  }
+  SEXP sexp = NEW_NUMERIC(n);
+  if (sexp == NULL) {
+    printf("Problem while creating R vector.\n");
+    return sexp;
+  }
+  PROTECT(sexp);
+  double *sexp_p = NUMERIC_POINTER(sexp);
+  int i;
+  for (i = 0; i < n; i++) {
+    sexp_p[i] = v[i];
+  }
+  R_PreserveObject(sexp);
+  UNPROTECT(1);
+  return sexp;
 }
 
 SEXP
@@ -316,38 +363,38 @@ SexpIntVector_ptr(SEXP sexp) {
   return INTEGER_POINTER(sexp); 
 }
 	
-/* Return 0 on failure (should be NaN) */
-int
-SexpIntVector_getitem(const SEXP sexp, int i) {
-  if (TYPEOF(sexp) != INTSXP) {
-    printf("Not an R vector of type INTSXP.\n");
-    /*FIXME: return int or NULL ?*/
-    return 0;
-  }
-  if (i >= LENGTH(sexp)) {
-    printf("Out-of-bound.\n");
-    /*FIXME: return int or NULL ?*/
-    return 0;
-  }
-  int res = INTEGER_POINTER(sexp)[i];
-  return res;
-} 
+/* /\* Return 0 on failure (should be NaN) *\/ */
+/* int */
+/* SexpIntVector_getitem(const SEXP sexp, int i) { */
+/*   if (TYPEOF(sexp) != INTSXP) { */
+/*     printf("Not an R vector of type INTSXP.\n"); */
+/*     /\*FIXME: return int or NULL ?*\/ */
+/*     return 0; */
+/*   } */
+/*   if (i >= LENGTH(sexp)) { */
+/*     printf("Out-of-bound.\n"); */
+/*     /\*FIXME: return int or NULL ?*\/ */
+/*     return 0; */
+/*   } */
+/*   int res = INTEGER_POINTER(sexp)[i]; */
+/*   return res; */
+/* }  */
 
-/* Return -1 on failure */
-int SexpIntVector_setitem(const SEXP sexp, int i, int value) {
-  if (TYPEOF(sexp) != INTSXP) {
-    printf("Not an R vector of type INTSXP.\n");
-    /*FIXME: return int or NULL ?*/
-    return -1;
-  }
-  if (i >= LENGTH(sexp)) {
-    printf("Out-of-bound.\n");
-    /*FIXME: return int or NULL ?*/
-    return -1;
-  }
-  INTEGER_POINTER(sexp)[i] = value;
-  return 0;
-} 
+/* /\* Return -1 on failure *\/ */
+/* int SexpIntVector_setitem(const SEXP sexp, int i, int value) { */
+/*   if (TYPEOF(sexp) != INTSXP) { */
+/*     printf("Not an R vector of type INTSXP.\n"); */
+/*     /\*FIXME: return int or NULL ?*\/ */
+/*     return -1; */
+/*   } */
+/*   if (i >= LENGTH(sexp)) { */
+/*     printf("Out-of-bound.\n"); */
+/*     /\*FIXME: return int or NULL ?*\/ */
+/*     return -1; */
+/*   } */
+/*   INTEGER_POINTER(sexp)[i] = value; */
+/*   return 0; */
+/* }  */
 
 SEXP Promise_eval(SEXP sexp) {
   SEXP res, env;

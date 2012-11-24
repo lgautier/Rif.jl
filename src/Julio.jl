@@ -2,12 +2,12 @@ module Julio
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.assign, Base.ref, Base.convert
+import Base.assign, Base.ref, Base.convert, Base.length
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
-REnvironment, RFunction,
-RArrayInt32, RArrayStr,
-getGlobalEnv
+       REnvironment, RFunction,
+       RArrayInt32, RArrayFloat, RArrayStr,
+       getGlobalEnv
 
 libri = dlopen("./src/librinterface")
 
@@ -64,22 +64,32 @@ end
 abstract Sexp
 #    sexp::Ptr{Void}
 
-abstract SexpArray <: Sexp
-
 function named(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_named), Int,
                  (Ptr{Void},), sexp)
     return res
 end
 
+abstract SexpArray <: Sexp
+
+function length{T <: SexpArray}(sexp::T)
+    res =  ccall(dlsym(libri, :Sexp_length), Int,
+                 (Ptr{Void},), sexp)
+    return res
+end
+    
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
+const SYMSXP  = uint(1)
 const LISTSXP = uint(2)
 const CLOSXP  = uint(3)
 const ENVSXP  = uint(4)
 const PROMSXP  = uint(5)
+const BUILTINSXP  = uint(8)
+const LGLSXP  = uint(10)
 const INTSXP  = uint(11)
 const STRSXP  = uint(16)
+const S4SXP  = uint(25)
 
 function rtype(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_typeof), Int,
@@ -128,21 +138,30 @@ type RArrayInt32 <: SexpArray
         new(c_ptr)
     end
     function RArrayInt32(v::Vector{Int32})
-        c_ptr = ccall(dlsym(libri, :SexpIntVector_new), Ptr{Uint8},
+        c_ptr = ccall(dlsym(libri, :SexpIntVector_new), Ptr{Void},
                       (Ptr{Int32}, Int32),
                       v, length(v))
         new(c_ptr)
     end
 end    
 
-function ref(x::RArrayInt32, i::Integer)
-    c_int = ccall(dlsym(libri, :SexpIntVector_getitem), Int32,
-                  (Ptr{Void}, Int32),
-                  x.sexp, i)
-    if c_int == C_NULL
-        error("Error while getting element ", i, ".")
+
+macro librinterface_getitem(returntype, classname, x, i)
+    local f = $("$(classname)_getitem")
+    quote
+        local res = ccall(dlsym(libri, $f), $returntype,
+                          (Ptr{Void}, Int32),
+                          $x.sexp, $i)
+        local_res = int32(1)
+        if res == C_NULL
+            error("Error while getting element ", $i, ".")
+        end
+        return res
     end
-    return c_int
+end
+
+function ref(x::RArrayInt32, i::Integer)
+    @librinterface_getitem Int32 SexpIntVector x i
 end
 
 #function convert
@@ -150,7 +169,6 @@ end
 #                  (Ptr{Void},),
 #                  res.sexp)
     
-
 function assign(x::RArrayInt32, val::Int32, i::Int32)
     res = ccall(dlsym(libri, :SexpIntVector_setitem), Int32,
                 (Ptr{Void}, Int32, Int32),
@@ -159,6 +177,22 @@ function assign(x::RArrayInt32, val::Int32, i::Int32)
         error("Error while assigning integer.")
     end
 end
+
+type RArrayFloat <: SexpArray
+    sexp::Ptr{Void}
+    function RArrayFloat(c_ptr::Ptr{Void})
+        if _rtype(c_ptr) != REALSXP
+            error("Incompatible type.")
+        end
+        new(c_ptr)
+    end
+    function RArrayFloat(v::Vector{Int32})
+        c_ptr = ccall(dlsym(libri, :SexpDoubleVector_new), Ptr{Void},
+                      (Ptr{Float64}, Int32),
+                      v, length(v))
+        new(c_ptr)
+    end
+end    
 
 
 type RArrayStr <: SexpArray
@@ -169,6 +203,13 @@ type RArrayStr <: SexpArray
         end
         new(c_ptr)
     end
+    function RArrayStr(v::Vector{ASCIIString})
+        c_ptr = ccall(dlsym(libri, :SexpStrVector_new), Ptr{Void},
+                      (Ptr{Uint8}, Int32),
+                      v, length(v))
+        new(c_ptr)
+    end
+
 end
 
 ## function convert(::Array{ASCIIString}, x::RArrayStr)
