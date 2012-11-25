@@ -2,12 +2,12 @@ module Julio
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.assign, Base.ref, Base.convert, Base.length
+import Base.assign, Base.ref, Base.convert, Base.length, Base.map
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArrayInt32, RArrayFloat64, RArrayStr, RArrayVec,
-       ref, assign,
+       ref, assign, map,
        call, names,
        getGlobalEnv
 
@@ -86,6 +86,26 @@ function names{T <: SexpArray}(sexp::T)
     return _factory(c_ptr)
 end
 
+const _rl_map = {
+    #3 => RFunction,
+    #4 => REnvironment,
+    11 => (n)->Array(Int32, n), #INTSXP
+    14 => (n)->Array(Float64, n), #REALSXP
+    16 => (n)->Array(ASCIIString, n), #STRSXP
+    19 => cell #VECSXP                            
+                     }
+function map{T <: SexpArray}(sexp::T, func::Function)
+    n = length(sexp)
+    res = cell(n)
+    i = 0
+    #FIXME: 1-offset indexing for Julia arrays !
+    while i < n
+        res[i+1] = func(sexp[i])
+        i += 1
+    end
+    res
+end
+
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -95,7 +115,7 @@ const ENVSXP  = uint(4)
 const PROMSXP  = uint(5)
 const BUILTINSXP  = uint(8)
 const LGLSXP  = uint(10)
-const INTSXP  = uint(11)
+const INTSXP  = uint(13)
 const REALSXP  = uint(14)
 const STRSXP  = uint(16)
 const VECSXP  = uint(19)
@@ -143,7 +163,8 @@ type RArrayInt32 <: SexpArray
     sexp::Ptr{Void}
     function RArrayInt32(c_ptr::Ptr{Void})
         if _rtype(c_ptr) != INTSXP
-            error("Incompatible type.")
+            error("Incompatible type (expected ", INTSXP,
+                  ", get ", _rtype(c_ptr), ").")
         end
         new(c_ptr)
     end
@@ -366,7 +387,7 @@ end
 const _rl_dispatch = {
     3 => RFunction,
     4 => REnvironment,
-    11 => RArrayInt32,
+    13 => RArrayInt32,
     14 => RArrayFloat64,
     16 => RArrayStr,
     19 => RArrayVec

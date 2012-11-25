@@ -30,6 +30,9 @@ ge = Julio.getGlobalEnv()
 # (here from GlobalEnv, so like it would be from the R console)
 lt = Julio.get(ge, "letters")
 
+# use Julia's "map()"
+Julio.map(lt, (x)->"letter "x)
+
 # get the function 'date()'
 r_date = Julio.get(ge, "date")
 # call it without parameters
