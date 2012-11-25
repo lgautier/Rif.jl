@@ -203,6 +203,33 @@ macro librinterface_setitem(valuetype, classname, x, i, value)
     end
 end
 
+macro librinterface_getvalue(returntype, classname, x, i)
+    local f = "$(classname)_getvalue"
+    quote
+       local res = ccall(dlsym(libri, $f), $returntype,
+                         (Ptr{Void}, Ptr{Uint8}),
+                         $x.sexp, $i)
+       if res == C_NULL
+           error("Error while getting element ", $i, ".")
+       end
+       res
+    end
+end
+
+macro librinterface_setvalue(valuetype, classname, x, i, value)
+    local f = "$(classname)_setvalue"
+    quote
+       local res = ccall(dlsym(libri, $f), Int32,
+                         (Ptr{Void}, Ptr{Uint8}, $valuetype),
+                         $x.sexp, $i, $value)
+       if res == -1
+           error("Error while setting element ", $i, ".")
+       end
+       res
+    end
+end
+
+
 function ref(x::RArrayInt32, i::Int64)
     i = int32(i)
     res = @librinterface_getitem Int32 SexpIntVector x i
@@ -353,6 +380,15 @@ type REnvironment <: Sexp
     end    
 end
 
+function ref(x::REnvironment, i::ASCIIString)
+    c_ptr = @librinterface_getvalue Ptr{Void} SexpEnvironment x i
+    return _factory(c_ptr)
+end
+function assign{T <: Sexp}(x::REnvironment, val::T, i::ASCIIString)
+    res = @librinterface_setvalue Ptr{Void} SexpEnvironment x i val
+    return res
+end
+
 function getGlobalEnv()
     res = ccall(dlsym(libri, :EmbeddedR_getGlobalEnv), Ptr{Void},
                 ())
@@ -402,7 +438,7 @@ end
 
 #FIXME: implement get for UTF8 symbols
 function get(environment::REnvironment, symbol::ASCIIString)
-    c_ptr = ccall(dlsym(libri, :Environment_get), Ptr{Void},
+    c_ptr = ccall(dlsym(libri, :SexpEnvironment_get), Ptr{Void},
                  (Ptr{Void}, Ptr{Uint8}),
                 environment.sexp, symbol)
     # evaluate if promise

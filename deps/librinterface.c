@@ -10,6 +10,8 @@
 #include <readline/readline.h>
 #endif
 
+#include "r_utils.h"
+
 /* char *initargv[]= {"JuliaEmbeddedR", "--verbose"}; */
 typedef struct {
   int argc;
@@ -500,7 +502,7 @@ SEXP Promise_eval(SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
-Environment_get(const SEXP envir, const char* symbol) {
+SexpEnvironment_get(const SEXP envir, const char* symbol) {
   if (! RINTERF_ISREADY()) {
     printf("R is not ready.\n");
     return NULL;
@@ -519,6 +521,93 @@ Environment_get(const SEXP envir, const char* symbol) {
   RStatus ^= RINTERF_IDLE;
   return sexp_ok;
 }
+
+/* Return NULL on failure */
+SEXP
+SexpEnvironment_getvalue(const SEXP envir, const char* name) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready.\n");
+    return NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  SEXP sexp, symbol;
+  symbol = Rf_install(name);
+  PROTECT(sexp = findVarInFrame(envir, symbol));
+  //FIXME: protect/unprotect from garbage collection (for now protect only)
+  R_PreserveObject(sexp);
+  UNPROTECT(1);
+  RStatus ^= RINTERF_IDLE;
+  return sexp;
+}
+
+int
+SexpEnvironment_delvalue(const SEXP envir, const char* name) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready.\n");
+    return -1;
+  }
+  RStatus ^= RINTERF_IDLE;
+
+  if (envir == R_BaseNamespace) {
+    printf("Variables in the R base namespace cannot be changed.\n");
+    RStatus ^= RINTERF_IDLE;
+    return -1;    
+  } else if (envir == R_BaseEnv) {
+    printf("Variables in the R base environment cannot be changed.\n");
+    RStatus ^= RINTERF_IDLE;
+    return -1;    
+  } else if (envir == R_EmptyEnv) {
+    printf("Nothing can be changed from the empty environment.\n");
+    RStatus ^= RINTERF_IDLE;
+    return -1;
+  } else if (R_EnvironmentIsLocked(envir)) {
+    printf("Variables in a locked environment cannot be changed.\n");
+    RStatus ^= RINTERF_IDLE;
+    return -1;
+  }
+  SEXP sexp, symbol;
+  symbol = Rf_install(name);
+  PROTECT(sexp = findVarInFrame(envir, symbol));
+  if (sexp == R_UnboundValue) {
+    printf("'%s' not found.\n", name);
+    UNPROTECT(1);
+    RStatus ^= RINTERF_IDLE;
+    return -1;
+  }
+  SEXP res_rm = librinterface_remove(symbol, envir, R_BaseEnv);
+  if (! res_rm) {
+    printf("Could not remove the variable '%s' from environment.", name);
+    UNPROTECT(1);
+    RStatus ^= RINTERF_IDLE;
+    return -1;
+  }
+  UNPROTECT(1);
+  RStatus ^= RINTERF_IDLE;
+  return 0;
+}
+
+int
+SexpEnvironment_setvalue(const SEXP envir, const char* name, const SEXP value) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready.\n");
+    return -1;
+  }
+  RStatus ^= RINTERF_IDLE;
+
+  SEXP symbol;
+  symbol = Rf_install(name);
+
+  //FIXME: is the copy really needed / good ?
+  SEXP value_copy;
+  PROTECT(value_copy = Rf_duplicate(value));
+  Rf_defineVar(symbol, value_copy, envir);  
+  //FIXME: protect/unprotect from garbage collection (for now protect only)
+  UNPROTECT(1);
+  RStatus ^= RINTERF_IDLE;
+  return 0;
+}
+
+
 
 /* Return NULL on failure */
 SEXP

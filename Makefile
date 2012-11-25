@@ -7,8 +7,9 @@ LDFLAGS=       `${R} CMD config --ldflags`
 SRC=           deps/
 
 all:
-	cd $(SRC) && $(CC) $(CFLAGS) $(CPPFLAGS) -fPIC -c librinterface.c -o librinterface.o
-	cd $(SRC) && $(CC) -shared librinterface.o $(LDFLAGS) -o librinterface.so
+	cd $(SRC) && $(CC) $(CFLAGS) $(CPPFLAGS) -fPIC -c r_utils.c -o r_utils.o
+	cd $(SRC) && $(CC) $(CFLAGS) $(CPPFLAGS) -Ir_utils -fPIC -c librinterface.c -o librinterface.o
+	cd $(SRC) && $(CC) -shared librinterface.o r_utils.o $(LDFLAGS) -o librinterface.so
 
 clean:
 	cd $(SRC) && rm -f *.o *.so

@@ -1,10 +1,10 @@
 include("lib/Julio.jl")
 #using Julio
 
-#
-
+# set starting parameters for the embedded R
 argv = ["Julio", "--slave"]# "--quiet"]
 Julio.setinitargs(argv)
+# initialize embedded R
 Julio.initr()
 
 # new anonymous R vector of integers
@@ -33,12 +33,12 @@ lt = Julio.get(ge, "letters")
 # use Julia's "map()"
 Julio.map(lt, (x)->"letter "x)
 
-# get the function 'date()'
+# get the R function 'date()'
 r_date = Julio.get(ge, "date")
 # call it without parameters
 res_date = Julio.call(r_date, [], [], ge)
 
-# get the function 'R.Version()'
+# get the R function 'R.Version()'
 r_version = Julio.get(ge, "R.Version")
 # call it without parameters
 res_version = Julio.call(r_version, [], [], ge)
