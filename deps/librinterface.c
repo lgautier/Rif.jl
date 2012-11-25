@@ -243,6 +243,18 @@ Sexp_length(const SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
+Sexp_names(const SEXP sexp) {
+  if (! RINTERF_ISREADY()) {
+    return NULL;
+  }
+  SEXP res = GET_NAMES(sexp);
+  R_PreserveObject(res);
+  return res;
+}
+
+
+/* Return NULL on failure */
+SEXP
 Sexp_evalPromise(const SEXP sexp) {
   if (TYPEOF(sexp) != PROMSXP) {
     printf("Not a promise.\n");
@@ -545,7 +557,6 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   int protect_count = 0;
 
   /*FIXME: check that fun_R is a function ? */
-  printf("Calling R function %p with %i parameters.\n", fun_R, argc);
   SEXP s, t;
   /* List to contain the R call (function + arguments) */
   PROTECT(s = t = allocVector(LANGSXP, argc+1));

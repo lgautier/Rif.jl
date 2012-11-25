@@ -32,38 +32,27 @@ lt = Julio.get(ge, "letters")
 
 # get the function 'date()'
 r_date = Julio.get(ge, "date")
-# call it without parameter
+# call it without parameters
 res_date = Julio.call(r_date, [], [], ge)
 
 # get the function 'R.Version()'
 r_version = Julio.get(ge, "R.Version")
-# call it without parameter
+# call it without parameters
 res_version = Julio.call(r_version, [], [], ge)
+
+# get the function "toupper" (turns string to upper case)
+r_toupper = Julio.get(ge, "toupper")
+# call it with a blank-name parameter
+res_toup = Julio.call(r_toupper, [lt,], ["",], ge)
 
 # get the function 'mean()'
 r_mean = Julio.get(ge, "mean")
 v = Int32[1,2,3]
 v_r = Julio.RArrayInt32(v)
-# call it with a parameter
+# call it with a named parameter
 res_mean = Julio.call(r_mean, [v_r,], ["x",], ge)
 
-
-r_toupper = Julio.get(ge, "toupper")
-res_toup = Julio.call(r_toupper, [lt,], ["",], ge)
-
-r_seq = Julio.get(ge, "seq")
-res_seq = Julio.call(r_seq, [], [], ge)
-
-
-#libri = Julio.libri
-#argv_p = map((x)->pointer(x.data), argv)
-#res = ccall(dlsym(libri, :EmbeddedR_setInitArgs), Int,
-#            (Int32, Ptr{Ptr{Uint8}}), length(argv), argv_p)
-
-#rhome = rstrip(readall(`R RHOME`))
-#EnvHash()["R_HOME"] = rhome
-#Julio.initr()
-
-#ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
-
-#sexp = ccall(dlsym(libri, :EmbeddedR_getGlobalEnv), Ptr{Void}, ())
+# get a loaded dataset
+r_iris = Julio.get(ge, "iris")
+# get names
+Julio.names(r_iris)[1]

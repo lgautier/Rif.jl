@@ -6,8 +6,9 @@ import Base.assign, Base.ref, Base.convert, Base.length
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
-       RArrayInt32, RArrayFloat64, RArrayStr,
-       ref, assign, call,
+       RArrayInt32, RArrayFloat64, RArrayStr, RArrayVec,
+       ref, assign,
+       call, names,
        getGlobalEnv
 
 libri = dlopen("./deps/librinterface")
@@ -78,7 +79,13 @@ function length{T <: SexpArray}(sexp::T)
                  (Ptr{Void},), sexp)
     return res
 end
-    
+
+function names{T <: SexpArray}(sexp::T)
+    c_ptr =  ccall(dlsym(libri, :Sexp_names), Ptr{Void},
+                   (Ptr{Void},), sexp)
+    return _factory(c_ptr)
+end
+
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -298,7 +305,6 @@ type RArrayVec <: SexpArray
                       v_p, length(v))
         new(c_ptr)
     end
-
 end
 
 function ref(x::RArrayVec, i::Int64)
