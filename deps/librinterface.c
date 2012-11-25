@@ -2,8 +2,13 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <R.h>
+#include <Rinterface.h>
+#include <Rversion.h>
 #include <Rembedded.h>
 #include <Rdefines.h>
+#ifdef HAS_READLINE
+#include <readline/readline.h>
+#endif
 
 /* char *initargv[]= {"JuliaEmbeddedR", "--verbose"}; */
 typedef struct {
@@ -16,6 +21,8 @@ typedef struct {
 /* } call; */
 
 static InitArgv *initargv = NULL;
+
+static SEXP errMessage_SEXP;
 
 /* R does not accept any concurrency. We store the
    status of the R engine in global and this must
@@ -163,16 +170,46 @@ EmbeddedR_init(void) {
     RStatus ^= RINTERF_IDLE;
     return -1;
   }
-  int res = Rf_initEmbeddedR(initargv->argc, initargv->argv);
-  if (res == 1) {
-    RStatus |= (RINTERF_INITIALIZED);
-    RStatus ^= RINTERF_IDLE;
-    return 0;
-  } else {
+  int status = Rf_initEmbeddedR(initargv->argc, initargv->argv);
+  if (status < 0) {
     printf("R initialization failed.\n"); 
     RStatus ^= RINTERF_IDLE;
-   return -1;
+    return -1;
   }
+
+  /* R_Interactive = TRUE; */
+  /* #ifdef RIF_HAS_RSIGHAND */
+  /* R_SignalHandlers = 0; */
+  /* #endif */
+
+  /* #ifdef CSTACK_DEFNS */
+  /* /\* Taken from JRI: */
+  /*  * disable stack checking, because threads will thow it off *\/ */
+  /* R_CStackStart = (uintptr_t) -1; */
+  /* R_CStackLimit = (uintptr_t) -1; */
+  /* /\* --- *\/ */
+  /* #endif */
+
+  //setup_Rmainloop();
+
+  /*FIXME: setting readline variables so R's oddly static declarations
+    become harmless*/
+#ifdef HAS_READLINE
+  char *rl_completer, *rl_basic;
+  rl_completer = strndup(rl_completer_word_break_characters, 200);
+  rl_completer_word_break_characters = rl_completer;
+  
+  rl_basic = strndup(rl_basic_word_break_characters, 200);
+  rl_basic_word_break_characters = rl_basic;
+#endif
+
+  /* */
+  errMessage_SEXP = findVar(install("geterrmessage"), 
+                            R_BaseNamespace);
+
+  RStatus |= (RINTERF_INITIALIZED);
+  RStatus ^= RINTERF_IDLE;
+  return 0;
 }
 
 /* Return -1 on failure */
@@ -426,7 +463,7 @@ SEXP Promise_eval(SEXP sexp) {
   SEXP res, env;
   PROTECT(env = PRENV(sexp));
   PROTECT(res = eval(sexp, env));
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res;
 }
 
@@ -442,7 +479,6 @@ Environment_get(const SEXP envir, const char* symbol) {
   PROTECT(sexp = findVar(install(symbol), envir));
   if (TYPEOF(sexp) == PROMSXP) {
     sexp_ok = Promise_eval(sexp);
-    UNPROTECT(1);
   } else {
     sexp_ok = sexp;
   }
@@ -468,6 +504,21 @@ EmbeddedR_getGlobalEnv(void) {
   return sexp;  
 }
 
+/* */
+static const char*
+EmbeddedR_string_from_errmessage(void)
+{
+  SEXP expr, res;
+  /* PROTECT(errMessage_SEXP) */
+  PROTECT(expr = allocVector(LANGSXP, 1));
+  SETCAR(expr, errMessage_SEXP);
+  PROTECT(res = Rf_eval(expr, R_GlobalEnv));
+  const char *message = CHARACTER_VALUE(res);
+  UNPROTECT(2);
+  return message;
+}
+
+
 /* R call.*/
 SEXP
 Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
@@ -475,13 +526,18 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   int protect_count = 0;
 
   /*FIXME: check that fun_R is a function ? */
-
+  printf("Calling R function %p with %i parameters.\n", fun_R, argc);
   SEXP s, t;
+  /* List to contain the R call (function + arguments) */
   PROTECT(t = s = allocList(argc+1));
   protect_count++;
+
   SET_TYPEOF(s, LANGSXP);
+  /* plug the function in head of the list */
   SETCAR(t, fun_R);
+  /* move down the list */
   t = CDR(t);
+  /* iterate over the arguments */
   int arg_i;
   char *arg_name;
   for (arg_i = 0; arg_i < argc; arg_i++) {
@@ -491,7 +547,7 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
     arg_name = argn[arg_i];
     if (strlen(arg_name) > 0) {
       printf("    Setting name %s\n", arg_name);
-      SET_TAG(t, install((char *)(arg_name)));
+      SET_TAG(t, install(arg_name));
     }
     printf("    CDR moved\n");
     t = CDR(t);
@@ -502,6 +558,11 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   PROTECT(res_R = R_tryEval(s, env, &errorOccurred));
   protect_count++;
   printf("  done.\n");
+  if (errorOccurred) {
+    printf("Error: %s.\n", EmbeddedR_string_from_errmessage());
+    UNPROTECT(protect_count);
+    return NULL;
+  }
   SEXP res_ok;
   if (TYPEOF(res_R) == PROMSXP) {
     res_ok = Promise_eval(res_R);

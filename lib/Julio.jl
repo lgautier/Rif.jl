@@ -7,7 +7,7 @@ import Base.assign, Base.ref, Base.convert, Base.length
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArrayInt32, RArrayFloat64, RArrayStr,
-       ref, assign,
+       ref, assign, call,
        getGlobalEnv
 
 libri = dlopen("./deps/librinterface")
@@ -143,7 +143,7 @@ type RArrayInt32 <: SexpArray
                       (Ptr{Int32}, Int32),
                       v, length(v))
         new(c_ptr)
-    end
+    end    
 end    
 
 
@@ -173,6 +173,12 @@ macro librinterface_setitem(valuetype, classname, x, i, value)
     end
 end
 
+function ref(x::RArrayInt32, i::Int64)
+    i = int32(i)
+    res = @librinterface_getitem Int32 SexpIntVector x i
+    return res
+end
+
 function ref(x::RArrayInt32, i::Int32)
     res = @librinterface_getitem Int32 SexpIntVector x i
     return res
@@ -183,6 +189,11 @@ end
 #                  (Ptr{Void},),
 #                  res.sexp)
 
+function assign(x::RArrayInt32, val::Int32, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Int32 SexpIntVector x i val
+    return res
+end
 function assign(x::RArrayInt32, val::Int32, i::Int32)
     res = @librinterface_setitem Int32 SexpIntVector x i val
     return res
@@ -204,12 +215,22 @@ type RArrayFloat64 <: SexpArray
     end
 end    
 
+function ref(x::RArrayFloat64, i::Int64)
+    i = int32(i)
+    res = @librinterface_getitem Float64 SexpDoubleVector x i
+    return res
+end
 function ref(x::RArrayFloat64, i::Int32)
     res = @librinterface_getitem Float64 SexpDoubleVector x i
     return res
 end
 
 function assign(x::RArrayFloat64, val::Float64, i::Int32)
+    res = @librinterface_setitem Float64 SexpIntVector x i val
+    return res
+end
+function assign(x::RArrayFloat64, val::Float64, i::Int64)
+    i = int32(i)
     res = @librinterface_setitem Float64 SexpIntVector x i val
     return res
 end
@@ -224,9 +245,10 @@ type RArrayStr <: SexpArray
         new(c_ptr)
     end
     function RArrayStr(v::Vector{ASCIIString})
+        v_p = map((x)->pointer(x.data), v)
         c_ptr = ccall(dlsym(libri, :SexpStrVector_new), Ptr{Void},
                       (Ptr{Uint8}, Int32),
-                      v, length(v))
+                      v_p, length(v))
         new(c_ptr)
     end
 
@@ -237,11 +259,21 @@ end
 ##     return res
 ## end
 
+function ref(x::RArrayStr, i::Int64)
+    i = int32(i)
+    res = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
+    bytestring(res)
+end
 function ref(x::RArrayStr, i::Int32)
     res = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
     bytestring(res)
 end
 
+function assign(x::RArrayStr, val::ASCIIString, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
+    return res
+end
 function assign(x::RArrayStr, val::ASCIIString, i::Int32)
     res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
     return res
@@ -278,16 +310,18 @@ type RFunction <: Sexp
 
 end
 
-function call{T <: Sexp}(f::RFunction, argv::Vector{T},
-              argn::Vector{ASCIIString},
-              env::REnvironment)
+function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
+                         argn::Vector{U},
+                         env::REnvironment)
     argv_p = map((x)->x.sexp, argv)
     c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
                   (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Void}),
-                  f, argv_p, length(argv), env)
+                  f.sexp, argv_p, length(argv), env.sexp)
     return _factory(c_ptr)
 end
-    
+
+
+
 ## # FIXME: a conversion would be possible ?
 const _rl_dispatch = {
     3 => RFunction,

@@ -10,20 +10,16 @@ Julio.initr()
 # new anonymous R vector of integers
 v = Int32[1,2,3]
 v_r = Julio.RArrayInt32(v)
-
 elt = v_r[int32(1)]
 
 # new anonymous R vector of doubles
 v = Float64[1.0,2.0,3.0]
 v_r = Julio.RArrayFloat64(v)
-
 elt = v_r[int32(1)]
 
 # new anonymous R vector of strings
 v = ["abc","def","ghi"]
 v_r = Julio.RArrayStr(v)
-
-#FIXME: Quirk between ASCII and UTF-8
 elt = v_r[int32(1)]
 
 
@@ -34,7 +30,19 @@ ge = Julio.getGlobalEnv()
 # (here from GlobalEnv, so like it would be from the R console)
 lt = Julio.get(ge, "letters")
 
-# get a function
+# get the function 'date()'
+r_date = Julio.get(ge, "date")
+# call it without parameter
+res_date = Julio.call(r_date, [], [], ge)
+
+# get the function 'mean()'
+r_mean = Julio.get(ge, "mean")
+v = Int32[1,2,3]
+v_r = Julio.RArrayInt32(v)
+# call it with a parameter
+res_mean = Julio.call(r_mean, [v_r,], ["x",], ge)
+
+
 r_toupper = Julio.get(ge, "toupper")
 res_toup = Julio.call(r_toupper, [lt,], ["",], ge)
 
