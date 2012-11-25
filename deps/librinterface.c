@@ -624,6 +624,21 @@ EmbeddedR_getGlobalEnv(void) {
   return sexp;  
 }
 
+/* Return NULL on failure */
+SEXP
+EmbeddedR_getBaseEnv(void) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready.\n");
+    return NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  SEXP sexp = R_BaseEnv;
+  //FIXME: protect/unprotect from garbage collection (for now protect only)
+  R_PreserveObject(sexp);
+  RStatus ^= RINTERF_IDLE;
+  return sexp;  
+}
+
 /* */
 static const char*
 EmbeddedR_string_from_errmessage(void)

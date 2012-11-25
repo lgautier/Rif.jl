@@ -25,6 +25,9 @@ elt = v_r[int32(1)]
 
 # R's global environment
 ge = Julio.getGlobalEnv()
+# bind the anonymous R object in v_r to the name "foo" in the
+# global environment
+ge["foo"] = v_r
 
 # get an R object, starting the search from a given environment
 # (here from GlobalEnv, so like it would be from the R console)

@@ -7,9 +7,9 @@ import Base.assign, Base.ref, Base.convert, Base.length, Base.map
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArrayInt32, RArrayFloat64, RArrayStr, RArrayVec,
-       ref, assign, map,
+       ref, assign, map, del,
        call, names,
-       getGlobalEnv
+       getGlobalEnv, getBaseEnv
 
 libri = dlopen("./deps/librinterface")
 
@@ -384,16 +384,34 @@ function ref(x::REnvironment, i::ASCIIString)
     c_ptr = @librinterface_getvalue Ptr{Void} SexpEnvironment x i
     return _factory(c_ptr)
 end
+
 function assign{T <: Sexp}(x::REnvironment, val::T, i::ASCIIString)
     res = @librinterface_setvalue Ptr{Void} SexpEnvironment x i val
     return res
 end
+
+function del(x::REnvironment, i::ASCIIString)
+    res = ccall(dlsym(libri, :SexpEnvironment_delvalue), Int32,
+                (Ptr{Void}, Ptr{Uint8}),
+                x.sexp, i)
+    if res == -1
+        error("Element ", $i, "not found.")
+    end
+end
+
 
 function getGlobalEnv()
     res = ccall(dlsym(libri, :EmbeddedR_getGlobalEnv), Ptr{Void},
                 ())
     return REnvironment(res)
 end
+
+function getBaseEnv()
+    res = ccall(dlsym(libri, :EmbeddedR_getBaseEnv), Ptr{Void},
+                ())
+    return REnvironment(res)
+end
+
 
 type RFunction <: Sexp
     sexp::Ptr{Void}
