@@ -35,6 +35,11 @@ r_date = Julio.get(ge, "date")
 # call it without parameter
 res_date = Julio.call(r_date, [], [], ge)
 
+# get the function 'R.Version()'
+r_version = Julio.get(ge, "R.Version")
+# call it without parameter
+res_version = Julio.call(r_version, [], [], ge)
+
 # get the function 'mean()'
 r_mean = Julio.get(ge, "mean")
 v = Int32[1,2,3]

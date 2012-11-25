@@ -90,6 +90,7 @@ const BUILTINSXP  = uint(8)
 const LGLSXP  = uint(10)
 const INTSXP  = uint(11)
 const STRSXP  = uint(16)
+const VECSXP  = uint(19)
 const S4SXP  = uint(25)
 
 function rtype(sexp::Sexp)
@@ -279,6 +280,37 @@ function assign(x::RArrayStr, val::ASCIIString, i::Int32)
     return res
 end
 
+type RArrayVec <: SexpArray
+    sexp::Ptr{Void}
+    function RArrayVec(c_ptr::Ptr{Void})
+        if _rtype(c_ptr) != VECSXP
+            error("Incompatible type.")
+        end
+        new(c_ptr)
+    end
+    function RArrayVec{T <: Sexp}(v::Vector{T})
+        #FIXME: add constructor that builds R vectors
+        #       (ideally using conversion functions)
+        v_p = map((x)->pointer(x.sexp), v)
+        c_ptr = ccall(dlsym(libri, :SexpStrVector_new), Ptr{Void},
+                      (Ptr{Void}, Int32),
+                      v_p, length(v))
+        new(c_ptr)
+    end
+
+end
+
+function ref(x::RArrayVec, i::Int64)
+    i = int32(i)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
+    _factory(c_ptr)
+end
+function ref(x::RArrayVec, i::Int32)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
+    _factory(c_ptr)
+end
+
+
 type REnvironment <: Sexp
     sexp::Ptr{Void}
     function REnvironment()
@@ -327,7 +359,9 @@ const _rl_dispatch = {
     3 => RFunction,
     4 => REnvironment,
     11 => RArrayInt32,
-    16 => RArrayStr }
+    16 => RArrayStr,
+    19 => RArrayVec
+                      }
 
 function _factory(c_ptr::Ptr{Void})
     rtype::Int =  ccall(dlsym(libri, :Sexp_typeof), Int,

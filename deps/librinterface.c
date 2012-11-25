@@ -425,6 +425,25 @@ int*
 SexpIntVector_ptr(SEXP sexp) {
   return INTEGER_POINTER(sexp); 
 }
+
+/* Return NULL on failure */
+SEXP 
+SexpVecVector_getitem(const SEXP sexp, int i) {
+  if (TYPEOF(sexp) != VECSXP) {
+    printf("Not an R vector of type VECSXP.\n");
+    return NULL;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return NULL;
+  }
+  SEXP sexp_item = VECTOR_ELT(sexp, (R_len_t)i);
+  R_PreserveObject(sexp_item);
+  return sexp_item;
+} 
+
+
 	
 /* /\* Return 0 on failure (should be NaN) *\/ */
 /* int */
