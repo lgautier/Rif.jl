@@ -548,10 +548,9 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   printf("Calling R function %p with %i parameters.\n", fun_R, argc);
   SEXP s, t;
   /* List to contain the R call (function + arguments) */
-  PROTECT(t = s = allocList(argc+1));
+  PROTECT(s = t = allocVector(LANGSXP, argc+1));
   protect_count++;
 
-  SET_TYPEOF(s, LANGSXP);
   /* plug the function in head of the list */
   SETCAR(t, fun_R);
   /* move down the list */
@@ -560,23 +559,17 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   int arg_i;
   char *arg_name;
   for (arg_i = 0; arg_i < argc; arg_i++) {
-    printf("  arg %i\n", arg_i);
     SETCAR(t, argv[arg_i]);
-    printf("    CAR is set\n");
     arg_name = argn[arg_i];
     if (strlen(arg_name) > 0) {
-      printf("    Setting name %s\n", arg_name);
       SET_TAG(t, install(arg_name));
     }
-    printf("    CDR moved\n");
     t = CDR(t);
   }
   int errorOccurred = 0;
   SEXP res_R;
-  printf("Calling R.\n");
   PROTECT(res_R = R_tryEval(s, env, &errorOccurred));
   protect_count++;
-  printf("  done.\n");
   if (errorOccurred) {
     printf("Error: %s.\n", EmbeddedR_string_from_errmessage());
     UNPROTECT(protect_count);

@@ -89,6 +89,7 @@ const PROMSXP  = uint(5)
 const BUILTINSXP  = uint(8)
 const LGLSXP  = uint(10)
 const INTSXP  = uint(11)
+const REALSXP  = uint(14)
 const STRSXP  = uint(16)
 const VECSXP  = uint(19)
 const S4SXP  = uint(25)
@@ -346,9 +347,10 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
                          argn::Vector{U},
                          env::REnvironment)
     argv_p = map((x)->x.sexp, argv)
+    argn_p = map((x)->pointer(x.data), argn)
     c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
-                  (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Void}),
-                  f.sexp, argv_p, length(argv), env.sexp)
+                  (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Uint8}, Ptr{Void}),
+                  f.sexp, argv_p, length(argv), argn_p, env.sexp)
     return _factory(c_ptr)
 end
 
@@ -359,6 +361,7 @@ const _rl_dispatch = {
     3 => RFunction,
     4 => REnvironment,
     11 => RArrayInt32,
+    14 => RArrayFloat64,
     16 => RArrayStr,
     19 => RArrayVec
                       }
