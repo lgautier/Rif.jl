@@ -9,7 +9,9 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        RArrayInt32, RArrayFloat64, RArrayStr, RArrayVec,
        ref, assign, map, del,
        call, names,
-       getGlobalEnv, getBaseEnv
+       convert,
+       getGlobalEnv, getBaseEnv,
+       R
 
 libri = dlopen("./deps/librinterface")
 
@@ -139,9 +141,6 @@ function convert{T <: Sexp}(::Type{Ptr{Void}}, x::T)
 end
 
 
-## function convert(::Type{RStrVector}, x::Array{ASCIIString})
-##     error("Not implemented")
-## end
 
 ## function convert(::Type{Array{ASCIIString}}, x::Type{RArray{ASCIIString}})
 ##     error("Not implemented")
@@ -311,6 +310,18 @@ type RArrayStr <: SexpArray
 
 end
 
+#FIXME: Why isn't this working ?
+function convert(::Vector{ASCIIString}, x::Type{RArrayStr})
+    n = length(x)
+    res = Array(ASCIIString, n)
+    i = 1
+    while i <= n
+        res[i] = x[i-1]
+        i += 1
+    end
+    res
+end
+
 ## function convert(::Array{ASCIIString}, x::RArrayStr)
 ##     res = map((x)->x, bytestring)
 ##     return res
@@ -468,5 +479,53 @@ function get(environment::REnvironment, symbol::ASCIIString)
     return _factory(c_ptr)
 end
 
+
+function Rinenv(expr::Expr, env::REnvironment)
+    if typeof(expr) == Symbol
+        # unnamed symbol, used untouched 
+        #FIXME: automagic conversion ?
+        print("Symbol: ", expr)
+        return expr
+    elseif expr.head == :call
+        print("Call: ")
+        # function call
+        func_sym = expr.args[1]
+        # sanity check (in case I missed something)
+        if typeof(func_sym) != Symbol
+            error("Expected a symbol")
+        end
+            rfunc = get(env, "$func_sym")
+        # next are arguments
+        i = 2
+        n = length(exprs.args)
+        #FIXME: what if n == 1 ?
+        error("Expression of unsufficient length: ", expr)
+        eargv = Array(Any, n-1)
+        eargn = Array(ASCIIString, n-1)
+        while i < n
+            a = expr.args[i]
+            elt = Rinenv(a, env)
+            eargs[i-1] = elt
+        end
+        @eval expr(func_sym, eargs)
+    elseif expr.head == :tuple
+        #FIXME: can this occur ?
+    elseif expr.head == :(:=)
+        # named variable
+        if length(expr.args) != 2
+            error("Expected an expression of length 2 and got: ", expr)
+        end
+        v_name = expr.args[1]
+        print(v_name)
+        v_value = expr.args[2]
+    end
+    error("We should not be here with: ", expr)
+end
+
+
+macro R(expr)
+    ge = getGlobalEnv()
+    Rinenv(expr, ge)
+end
 
 end

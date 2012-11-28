@@ -1,3 +1,5 @@
+# -*- mode: makefile-gmake -*-
+
 CC=            gcc
 R=             R
 CPPFLAGS =     `${R} CMD config --cppflags`

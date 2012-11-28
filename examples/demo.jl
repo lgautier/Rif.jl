@@ -61,4 +61,8 @@ res_mean = Julio.call(r_mean, [v_r,], ["x",], ge)
 # get a loaded dataset
 r_iris = Julio.get(ge, "iris")
 # get names
-Julio.names(r_iris)[1]
+colnames = Julio.names(r_iris)
+
+# 
+v = Int32[1,2,3]
+v_r = Julio.RArrayInt32(v)

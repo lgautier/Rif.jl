@@ -1,4 +1,3 @@
-# -*- mode: makefile-gmake -*-
 
 SRC=           deps/
 
