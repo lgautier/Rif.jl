@@ -11,7 +11,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        call, names,
        convert,
        getGlobalEnv, getBaseEnv,
-       R
+       Rinenv, @R
 
 libri = dlopen("./deps/librinterface")
 
