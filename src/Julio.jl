@@ -13,7 +13,22 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        getGlobalEnv, getBaseEnv,
        Rinenv, @R
 
-libri = dlopen("./deps/librinterface")
+       
+dllname = julia_pkgdir() * "/Julio/deps/librinterface.so"
+if !isfile(dllname)
+    println("*****************************************************")
+    println("Can't find librinterface.so; attempting to compile...")
+    println("*****************************************************")
+    cd(julia_pkgdir() * "/Julio/deps") do
+        run(`make all`) 
+    end
+    println("*****************************************************")
+    println("Compiling complete")
+    println("*****************************************************")
+end    
+
+libri = dlopen(julia_pkgdir() * "/Julio/deps/librinterface")
+
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
