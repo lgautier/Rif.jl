@@ -68,6 +68,11 @@ end
 abstract Sexp
 #    sexp::Ptr{Void}
 
+function librinterface_finalizer(sexp::Sexp)
+    ccall(dlsym(libri, :R_ReleaseObject), Void,
+          (Ptr{Void},), sexp)
+end
+    
 function named(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_named), Int,
                  (Ptr{Void},), sexp)
@@ -87,6 +92,7 @@ function names{T <: SexpArray}(sexp::T)
                    (Ptr{Void},), sexp)
     return _factory(c_ptr)
 end
+
 
 const _rl_map = {
     #3 => RFunction,
@@ -165,7 +171,9 @@ macro librinterface_vector_new(v, classname, celltype)
         c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
                       (Ptr{$celltype}, Int32),
                       v, length(v))
-        new(c_ptr)
+        obj = new(c_ptr)
+        finalizer(obj, librinterface_finalizer)
+        obj
     end
 end
 
