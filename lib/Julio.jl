@@ -91,6 +91,7 @@ end
 const _rl_map = {
     #3 => RFunction,
     #4 => REnvironment,
+    10 => (n)->Array(Bool, n), #LGLINTSXP
     11 => (n)->Array(Int32, n), #INTSXP
     14 => (n)->Array(Float64, n), #REALSXP
     16 => (n)->Array(ASCIIString, n), #STRSXP
@@ -158,6 +159,17 @@ end
 ##     end
 ## end
 
+macro librinterface_vector_new(v, classname, celltype)
+    local f = "$(classname)_new"
+    quote
+        c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
+                      (Ptr{$celltype}, Int32),
+                      v, length(v))
+        new(c_ptr)
+    end
+end
+
+
 type RArrayInt32 <: SexpArray
     sexp::Ptr{Void}
     function RArrayInt32(c_ptr::Ptr{Void})
@@ -168,10 +180,7 @@ type RArrayInt32 <: SexpArray
         new(c_ptr)
     end
     function RArrayInt32(v::Vector{Int32})
-        c_ptr = ccall(dlsym(libri, :SexpIntVector_new), Ptr{Void},
-                      (Ptr{Int32}, Int32),
-                      v, length(v))
-        new(c_ptr)
+        @librinterface_vector_new v SexpIntVector Int32
     end    
 end    
 
@@ -255,6 +264,43 @@ function assign(x::RArrayInt32, val::Int32, i::Int32)
     return res
 end
 
+# -- Bool
+type RArrayBool <: SexpArray
+    sexp::Ptr{Void}
+    function RArrayBool(c_ptr::Ptr{Void})
+        if _rtype(c_ptr) != LGLSXP
+            error("Incompatible type (expected ", LGLSXP,
+                  ", get ", _rtype(c_ptr), ").")
+        end
+        new(c_ptr)
+    end
+    function RArrayBool(v::Vector{Bool})
+        @librinterface_vector_new v SexpBoolVector Bool
+    end    
+end    
+
+function ref(x::RArrayBool, i::Int64)
+    i = int32(i)
+    res = @librinterface_getitem Bool SexpBoolVector x i
+    return res
+end
+
+function ref(x::RArrayBool, i::Int32)
+    res = @librinterface_getitem Bool SexpBoolVector x i
+    return res
+end
+
+function assign(x::RArrayBool, val::Bool, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Bool SexpBoolVector x i val
+    return res
+end
+function assign(x::RArrayBool, val::Bool, i::Int32)
+    res = @librinterface_setitem Bool SexpBoolVector x i val
+    return res
+end
+
+# -- Float64
 type RArrayFloat64 <: SexpArray
     sexp::Ptr{Void}
     function RArrayFloat64(c_ptr::Ptr{Void})
@@ -264,10 +310,7 @@ type RArrayFloat64 <: SexpArray
         new(c_ptr)
     end
     function RArrayFloat64(v::Vector{Float64})
-        c_ptr = ccall(dlsym(libri, :SexpDoubleVector_new), Ptr{Void},
-                      (Ptr{Float64}, Int32),
-                      v, length(v))
-        new(c_ptr)
+        @librinterface_vector_new v SexpDoubleVector Float64 
     end
 end    
 
@@ -302,10 +345,7 @@ type RArrayStr <: SexpArray
     end
     function RArrayStr(v::Vector{ASCIIString})
         v_p = map((x)->pointer(x.data), v)
-        c_ptr = ccall(dlsym(libri, :SexpStrVector_new), Ptr{Void},
-                      (Ptr{Uint8}, Int32),
-                      v_p, length(v))
-        new(c_ptr)
+        @librinterface_vector_new v_p SexpStrVector Uint8 
     end
 
 end
@@ -359,10 +399,7 @@ type RArrayVec <: SexpArray
         #FIXME: add constructor that builds R vectors
         #       (ideally using conversion functions)
         v_p = map((x)->pointer(x.sexp), v)
-        c_ptr = ccall(dlsym(libri, :SexpStrVector_new), Ptr{Void},
-                      (Ptr{Void}, Int32),
-                      v_p, length(v))
-        new(c_ptr)
+        @librinterface_vector_new v_p SexpVecVector Void 
     end
 end
 

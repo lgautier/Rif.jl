@@ -440,6 +440,31 @@ SexpIntVector_ptr(SEXP sexp) {
   return INTEGER_POINTER(sexp); 
 }
 
+
+/* Return NULL on failure */
+SEXP
+SexpBoolVector_new(int *v, int n) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready ready.\n");
+    return NULL;
+  }
+  SEXP sexp = NEW_LOGICAL(n);
+  if (sexp == NULL) {
+    printf("Problem while creating R vector.\n");
+    return sexp;
+  }
+  PROTECT(sexp);
+  int *sexp_p = LOGICAL_POINTER(sexp);
+  int i;
+  for (i = 0; i < n; i++) {
+    sexp_p[i] = v[i];
+  }
+  R_PreserveObject(sexp);
+  UNPROTECT(1);
+  return sexp;
+}
+
+
 /* Return NULL on failure */
 SEXP 
 SexpVecVector_getitem(const SEXP sexp, int i) {
