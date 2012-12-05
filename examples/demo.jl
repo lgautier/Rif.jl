@@ -1,5 +1,6 @@
-include("lib/Julio.jl")
+## include("lib/Julio.jl")
 #using Julio
+load("Julio")
 
 # set starting parameters for the embedded R
 argv = ["Julio", "--slave"]# "--quiet"]
