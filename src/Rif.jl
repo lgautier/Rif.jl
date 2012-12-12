@@ -1,4 +1,4 @@
-module Julio
+module Rif
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
@@ -14,12 +14,12 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        Rinenv, @R
 
        
-dllname = julia_pkgdir() * "/Julio/deps/librinterface.so"
+dllname = julia_pkgdir() * "/Rif/deps/librinterface.so"
 if !isfile(dllname)
     println("*****************************************************")
     println("Can't find librinterface.so; attempting to compile...")
     println("*****************************************************")
-    cd(julia_pkgdir() * "/Julio/deps") do
+    cd(julia_pkgdir() * "/Rif/deps") do
         run(`make all`) 
     end
     println("*****************************************************")
@@ -27,7 +27,7 @@ if !isfile(dllname)
     println("*****************************************************")
 end    
 
-libri = dlopen(julia_pkgdir() * "/Julio/deps/librinterface")
+libri = dlopen(julia_pkgdir() * "/Rif/deps/librinterface")
 
 
 function isinitialized()
