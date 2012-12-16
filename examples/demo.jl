@@ -62,6 +62,11 @@ r_iris = Rif.get(ge, "iris")
 # get names
 colnames = Rif.names(r_iris)
 
-# 
-v = Int32[1,2,3]
-v_r = Rif.RArrayInt32(v)
+# R macro, does like you'd get in an R console
+pi = @Rif.R(:pi)
+# in R, there are no scalars only vector
+pi = pi[0]
+
+@Rif.R(:paste)(:letters))
+
+

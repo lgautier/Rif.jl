@@ -539,35 +539,46 @@ function get(environment::REnvironment, symbol::ASCIIString)
     return _factory(c_ptr)
 end
 
+type NamedValue
+    name::ASCIIString
+    value::Any
+end
+
+
+function Rinenv(sym::Symbol, env::REnvironment)
+    return NamedValue("$sym", get(env, "$sym"))
+end
+# FIXME: if not symbol, means a local Julia variable ?
 
 function Rinenv(expr::Expr, env::REnvironment)
-    if typeof(expr) == Symbol
-        # unnamed symbol, used untouched 
-        #FIXME: automagic conversion ?
-        print("Symbol: ", expr)
-        return expr
-    elseif expr.head == :call
+    if expr.head == :call
         print("Call: ")
         # function call
         func_sym = expr.args[1]
         # sanity check (in case I missed something)
         if typeof(func_sym) != Symbol
-            error("Expected a symbol")
+            error("Expected a symbol but get " + func_sym)
         end
-            rfunc = get(env, "$func_sym")
+        rfunc = get(env, "$func_sym")
         # next are arguments
         i = 2
-        n = length(exprs.args)
-        #FIXME: what if n == 1 ?
-        error("Expression of unsufficient length: ", expr)
-        eargv = Array(Any, n-1)
+        n = length(expr.args)
+        if (n == 1)
+            error("Expression of unsufficient length: ", expr)
+        end
+        eargv = Array(Sexp, n-1)
         eargn = Array(ASCIIString, n-1)
-        while i < n
+        println("n = ", n)
+        println("expr.args = ", expr.args)
+        while i <= n
             a = expr.args[i]
             elt = Rinenv(a, env)
-            eargs[i-1] = elt
+            eargn[i-1] = elt.name
+            eargv[i-1] = elt.value
+            i += 1
         end
-        @eval expr(func_sym, eargs)
+        e = Expr(:call, {call, rfunc, eargv, eargn, env}, Any)
+        return e
     elseif expr.head == :tuple
         #FIXME: can this occur ?
     elseif expr.head == :(:=)
@@ -575,17 +586,19 @@ function Rinenv(expr::Expr, env::REnvironment)
         if length(expr.args) != 2
             error("Expected an expression of length 2 and got: ", expr)
         end
-        v_name = expr.args[1]
-        print(v_name)
+        v_name = "$(expr.args[1])"
         v_value = expr.args[2]
+        return NamedValue(v_name, v_value)
     end
     error("We should not be here with: ", expr)
 end
 
 
-macro R(expr)
-    ge = getGlobalEnv()
-    Rinenv(expr, ge)
+macro R(expression)
+    local ge = getGlobalEnv()
+    quote
+        Rinenv($expression, $ge)
+    end
 end
 
 end
