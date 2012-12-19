@@ -6,12 +6,13 @@ import Base.assign, Base.ref, Base.convert, Base.length, Base.map
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
-       RArrayInt32, RArrayFloat64, RArrayStr, RArrayVec,
+       RArray,
        ref, assign, map, del,
        call, names,
        convert,
        getGlobalEnv, getBaseEnv,
-       Rinenv, @R
+       Rinenv, @R,
+       Rrequire
 
        
 dllname = julia_pkgdir() * "/Rif/deps/librinterface.so"
@@ -80,56 +81,6 @@ function initr()
     return res
 end
 
-abstract Sexp
-#    sexp::Ptr{Void}
-
-function librinterface_finalizer(sexp::Sexp)
-    ccall(dlsym(libri, :R_ReleaseObject), Void,
-          (Ptr{Void},), sexp)
-end
-    
-function named(sexp::Sexp)
-    res =  ccall(dlsym(libri, :Sexp_named), Int,
-                 (Ptr{Void},), sexp)
-    return res
-end
-
-abstract SexpArray <: Sexp
-
-function length{T <: SexpArray}(sexp::T)
-    res =  ccall(dlsym(libri, :Sexp_length), Int,
-                 (Ptr{Void},), sexp)
-    return res
-end
-
-function names{T <: SexpArray}(sexp::T)
-    c_ptr =  ccall(dlsym(libri, :Sexp_names), Ptr{Void},
-                   (Ptr{Void},), sexp)
-    return _factory(c_ptr)
-end
-
-
-const _rl_map = {
-    #3 => RFunction,
-    #4 => REnvironment,
-    10 => (n)->Array(Bool, n), #LGLINTSXP
-    11 => (n)->Array(Int32, n), #INTSXP
-    14 => (n)->Array(Float64, n), #REALSXP
-    16 => (n)->Array(ASCIIString, n), #STRSXP
-    19 => cell #VECSXP                            
-                     }
-function map{T <: SexpArray}(sexp::T, func::Function)
-    n = length(sexp)
-    res = cell(n)
-    i = 0
-    #FIXME: 1-offset indexing for Julia arrays !
-    while i < n
-        res[i+1] = func(sexp[i])
-        i += 1
-    end
-    res
-end
-
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -144,6 +95,38 @@ const REALSXP  = uint(14)
 const STRSXP  = uint(16)
 const VECSXP  = uint(19)
 const S4SXP  = uint(25)
+
+const _rl_map_rtoj = {
+    LGLSXP => Bool,
+    INTSXP => Int32,
+    REALSXP => Float64,
+    STRSXP => ASCIIString,
+    VECSXP => Any
+                      }
+const _rl_map_jtor = {
+    Bool => LGLSXP,
+    Int32 => INTSXP,
+    Float64 => REALSXP,
+    ASCIIString => STRSXP,
+    Any => VECSXP
+                     }
+
+
+RVectorTypes = Union(Bool, Int32, Float64, ASCIIString)
+
+abstract Sexp
+#    sexp::Ptr{Void}
+
+function librinterface_finalizer(sexp::Sexp)
+    ccall(dlsym(libri, :R_ReleaseObject), Void,
+          (Ptr{Void},), sexp)
+end
+    
+function named(sexp::Sexp)
+    res =  ccall(dlsym(libri, :Sexp_named), Int,
+                 (Ptr{Void},), sexp)
+    return res
+end
 
 function rtype(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_typeof), Int,
@@ -163,23 +146,6 @@ function convert{T <: Sexp}(::Type{Ptr{Void}}, x::T)
 end
 
 
-
-## function convert(::Type{Array{ASCIIString}}, x::Type{RArray{ASCIIString}})
-##     error("Not implemented")
-## end
-
-
-
-## # FIXME: inherit from Julia's base Vector instead ?
-## type RArray{T,N} <: Sexp
-##     function RArray(x::Ptr{Void})
-##         # pass
-##     end
-##     function RArray(x::T, y::N)
-##         error("Not yet implemented.")
-##     end
-## end
-
 macro librinterface_vector_new(v, classname, celltype)
     local f = "$(classname)_new"
     quote
@@ -192,21 +158,83 @@ macro librinterface_vector_new(v, classname, celltype)
     end
 end
 
-
-type RArrayInt32 <: SexpArray
+type RArray{T, N} <: Sexp
     sexp::Ptr{Void}
-    function RArrayInt32(c_ptr::Ptr{Void})
-        if _rtype(c_ptr) != INTSXP
-            error("Incompatible type (expected ", INTSXP,
+    function RArray(c_ptr::Ptr{Void}, T::Type)
+        if _rtype(c_ptr) != _rl_map_jtor[T]
+            error("Incompatible type (expected ", _rl_map_jtor[T],
                   ", get ", _rtype(c_ptr), ").")
         end
         new(c_ptr)
     end
-    function RArrayInt32(v::Vector{Int32})
+    #function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
+    #    error("Not yet implemented")
+    #end
+    function RArray{T<:Bool}(v::Array{T,1})
+        @librinterface_vector_new v SexpBoolVector Bool
+    end
+    function RArray{T<:Bool}(v::Array{T,2})
+        @librinterface_vector_new v SexpBoolVector Bool
+    end
+    function RArray{T<:Int32}(v::Array{T,1})
         @librinterface_vector_new v SexpIntVector Int32
-    end    
+    end
+    function RArray{T<:Int32}(v::Array{T,2})
+        @librinterface_vector_new v SexpIntVector Int32
+    end
+    function RArray{T<:Float64}(v::Array{T,1})
+        @librinterface_vector_new v SexpDoubleVector Float64
+    end
+    function RArray{T<:Float64}(v::Array{T,2})
+        @librinterface_vector_new v SexpDoubleVector Float64
+    end
+    function RArray{T <: ASCIIString}(v::Array{T,1})
+        v_p = map((x)->pointer(x.data), v)
+        @librinterface_vector_new v_p SexpStrVector Uint8
+    end
+    function RArray{T <: ASCIIString}(v::Array{T,2})
+        v_p = map((x)->pointer(x.data), v)
+        @librinterface_vector_new v_p SexpStrVector Uint8
+    end
+    function RArray{T <: Sexp}(v::Vector{T,1})
+        #FIXME: add constructor that builds R vectors
+        #       (ideally using conversion functions)
+        v_p = map((x)->pointer(x.sexp), v)
+        @librinterface_vector_new v_p SexpVecVector Void
+    end
+
 end    
 
+
+
+function length(sexp::RArray)
+    res =  ccall(dlsym(libri, :Sexp_length), Int,
+                 (Ptr{Void},), sexp)
+    return res
+end
+
+function names(sexp::RArray)
+    c_ptr =  ccall(dlsym(libri, :Sexp_names), Ptr{Void},
+                   (Ptr{Void},), sexp)
+    return _factory(c_ptr)
+end
+
+function map(sexp::RArray, func::Function)
+    n = length(sexp)
+    res = cell(n)
+    i = 0
+    #FIXME: 1-offset indexing for Julia arrays !
+    while i < n
+        res[i+1] = func(sexp[i])
+        i += 1
+    end
+    res
+end
+
+
+## function convert(::Type{Array{ASCIIString}}, x::Type{RArray{ASCIIString}})
+##     error("Not implemented")
+## end
 
 macro librinterface_getitem(returntype, classname, x, i)
     local f = "$(classname)_getitem"
@@ -221,6 +249,25 @@ macro librinterface_getitem(returntype, classname, x, i)
     end
 end
 
+for t = ((Bool, :SexpBoolVector),
+         (Int32, :SexpIntVector),
+         (Float64, :SexpDoubleVector),
+         (ASCIIString, :SexpStrVector))
+    @eval begin
+        function ref(x::RArray{$t[1], 1}, i::Int64)
+            i = int32(i)
+            res = @librinterface_getitem $(t[1]) $(t[2]) x i
+            return res
+        end
+    end
+end
+
+function ref(x::RArray{Sexp}, i::Int64)
+    i = int32(i)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
+    _factory(c_ptr)
+end
+
 macro librinterface_setitem(valuetype, classname, x, i, value)
     local f = "$(classname)_setitem"
     quote
@@ -232,6 +279,30 @@ macro librinterface_setitem(valuetype, classname, x, i, value)
        end
        res
     end
+end
+
+function assign(x::RArray{Bool}, val::Bool, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Bool SexpBoolVector x i val
+    return res
+end
+
+function assign(x::RArray{Int32}, val::Int32, i::Int64)
+    i::Int32 = int32(i)
+    res = @librinterface_setitem Int32 SexpIntVector x i val
+    return res
+end
+
+function assign(x::RArray{Float64}, val::Float64, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Float64 SexpIntVector x i val
+    return res
+end
+
+function assign(x::RArray{ASCIIString}, val::ASCIIString, i::Int64)
+    i = int32(i)
+    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
+    return res
 end
 
 macro librinterface_getvalue(returntype, classname, x, i)
@@ -260,181 +331,22 @@ macro librinterface_setvalue(valuetype, classname, x, i, value)
     end
 end
 
-
-function ref(x::RArrayInt32, i::Int64)
-    i = int32(i)
-    res = @librinterface_getitem Int32 SexpIntVector x i
-    return res
-end
-
-function ref(x::RArrayInt32, i::Int32)
-    res = @librinterface_getitem Int32 SexpIntVector x i
-    return res
-end
-
-#function convert
-#    c_ptr = ccall(dlsym(libri, :SexpIntVector_ptr), Ptr{Int32},
-#                  (Ptr{Void},),
-#                  res.sexp)
-
-function assign(x::RArrayInt32, val::Int32, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Int32 SexpIntVector x i val
-    return res
-end
-function assign(x::RArrayInt32, val::Int32, i::Int32)
-    res = @librinterface_setitem Int32 SexpIntVector x i val
-    return res
-end
-
-# -- Bool
-type RArrayBool <: SexpArray
-    sexp::Ptr{Void}
-    function RArrayBool(c_ptr::Ptr{Void})
-        if _rtype(c_ptr) != LGLSXP
-            error("Incompatible type (expected ", LGLSXP,
-                  ", get ", _rtype(c_ptr), ").")
-        end
-        new(c_ptr)
-    end
-    function RArrayBool(v::Vector{Bool})
-        @librinterface_vector_new v SexpBoolVector Bool
-    end    
-end    
-
-function ref(x::RArrayBool, i::Int64)
-    i = int32(i)
-    res = @librinterface_getitem Bool SexpBoolVector x i
-    return res
-end
-
-function ref(x::RArrayBool, i::Int32)
-    res = @librinterface_getitem Bool SexpBoolVector x i
-    return res
-end
-
-function assign(x::RArrayBool, val::Bool, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Bool SexpBoolVector x i val
-    return res
-end
-function assign(x::RArrayBool, val::Bool, i::Int32)
-    res = @librinterface_setitem Bool SexpBoolVector x i val
-    return res
-end
-
-# -- Float64
-type RArrayFloat64 <: SexpArray
-    sexp::Ptr{Void}
-    function RArrayFloat64(c_ptr::Ptr{Void})
-        if _rtype(c_ptr) != REALSXP
-            error("Incompatible type.")
-        end
-        new(c_ptr)
-    end
-    function RArrayFloat64(v::Vector{Float64})
-        @librinterface_vector_new v SexpDoubleVector Float64 
-    end
-end    
-
-function ref(x::RArrayFloat64, i::Int64)
-    i = int32(i)
-    res = @librinterface_getitem Float64 SexpDoubleVector x i
-    return res
-end
-function ref(x::RArrayFloat64, i::Int32)
-    res = @librinterface_getitem Float64 SexpDoubleVector x i
-    return res
-end
-
-function assign(x::RArrayFloat64, val::Float64, i::Int32)
-    res = @librinterface_setitem Float64 SexpIntVector x i val
-    return res
-end
-function assign(x::RArrayFloat64, val::Float64, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Float64 SexpIntVector x i val
-    return res
-end
-
-
-type RArrayStr <: SexpArray
-    sexp::Ptr{Void}
-    function RArrayStr(c_ptr::Ptr{Void})
-        if _rtype(c_ptr) != STRSXP
-            error("Incompatible type.")
-        end
-        new(c_ptr)
-    end
-    function RArrayStr(v::Vector{ASCIIString})
-        v_p = map((x)->pointer(x.data), v)
-        @librinterface_vector_new v_p SexpStrVector Uint8 
-    end
-
-end
-
 #FIXME: Why isn't this working ?
-function convert(::Vector{ASCIIString}, x::Type{RArrayStr})
-    n = length(x)
-    res = Array(ASCIIString, n)
-    i = 1
-    while i <= n
-        res[i] = x[i-1]
-        i += 1
-    end
-    res
-end
+## function convert(::Vector{ASCIIString}, x::Type{RArrayStr})
+##     n = length(x)
+##     res = Array(ASCIIString, n)
+##     i = 1
+##     while i <= n
+##         res[i] = x[i-1]
+##         i += 1
+##     end
+##     res
+## end
 
 ## function convert(::Array{ASCIIString}, x::RArrayStr)
 ##     res = map((x)->x, bytestring)
 ##     return res
 ## end
-
-function ref(x::RArrayStr, i::Int64)
-    i = int32(i)
-    res = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
-    bytestring(res)
-end
-function ref(x::RArrayStr, i::Int32)
-    res = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
-    bytestring(res)
-end
-
-function assign(x::RArrayStr, val::ASCIIString, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
-    return res
-end
-function assign(x::RArrayStr, val::ASCIIString, i::Int32)
-    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
-    return res
-end
-
-type RArrayVec <: SexpArray
-    sexp::Ptr{Void}
-    function RArrayVec(c_ptr::Ptr{Void})
-        if _rtype(c_ptr) != VECSXP
-            error("Incompatible type.")
-        end
-        new(c_ptr)
-    end
-    function RArrayVec{T <: Sexp}(v::Vector{T})
-        #FIXME: add constructor that builds R vectors
-        #       (ideally using conversion functions)
-        v_p = map((x)->pointer(x.sexp), v)
-        @librinterface_vector_new v_p SexpVecVector Void 
-    end
-end
-
-function ref(x::RArrayVec, i::Int64)
-    i = int32(i)
-    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
-    _factory(c_ptr)
-end
-function ref(x::RArrayVec, i::Int32)
-    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
-    _factory(c_ptr)
-end
 
 
 type REnvironment <: Sexp
@@ -512,10 +424,10 @@ end
 const _rl_dispatch = {
     3 => RFunction,
     4 => REnvironment,
-    13 => RArrayInt32,
-    14 => RArrayFloat64,
-    16 => RArrayStr,
-    19 => RArrayVec
+    13 => RArray{Int32},
+    14 => RArray{Float64},
+    16 => RArray{ASCIIString},
+    19 => RArray{Sexp}
                       }
 
 function _factory(c_ptr::Ptr{Void})
@@ -599,6 +511,13 @@ macro R(expression)
     quote
         Rinenv($expression, $ge)
     end
+end
+
+function Rrequire(name::ASCIIString)
+    be = Rif.getBaseEnv()
+    ge = Rif.getGlocalEnv()
+    rfunc = be.get("require")
+    call(rfunc, {name}, [""], ge)
 end
 
 end

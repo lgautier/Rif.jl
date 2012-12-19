@@ -8,17 +8,17 @@ Rif.initr()
 
 # new anonymous R vector of integers
 v = Int32[1,2,3]
-v_r = Rif.RArrayInt32(v)
-elt = v_r[int32(1)]
+v_r = Rif.RArray{Int32,1}(v)
+elt = v_r[1]
 
 # new anonymous R vector of doubles
 v = Float64[1.0,2.0,3.0]
-v_r = Rif.RArrayFloat64(v)
+v_r = Rif.RArray{Float64,1}(v)
 elt = v_r[int32(1)]
 
 # new anonymous R vector of strings
 v = ["abc","def","ghi"]
-v_r = Rif.RArrayStr(v)
+v_r = Rif.RArray{ASCIIString,1}(v)
 elt = v_r[int32(1)]
 
 
@@ -65,7 +65,8 @@ colnames = Rif.names(r_iris)
 # R macro, does like you'd get in an R console
 pi = @Rif.R(:pi)
 # in R, there are no scalars only vector
-pi = pi[0]
+pi = pi.value[0]
+
 
 @Rif.R(:paste)(:letters))
 
