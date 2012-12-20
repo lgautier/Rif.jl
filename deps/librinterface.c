@@ -254,6 +254,15 @@ Sexp_names(const SEXP sexp) {
   return res;
 }
 
+/* Return -1 on failure */
+int
+Sexp_ndims(const SEXP sexp) {
+  if (! RINTERF_ISREADY()) {
+    return -1;
+  }
+  int res = LENGTH(GET_DIM(sexp));
+  return res;
+}
 
 /* Return NULL on failure */
 SEXP

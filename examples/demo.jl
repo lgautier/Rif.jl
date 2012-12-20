@@ -14,12 +14,12 @@ elt = v_r[1]
 # new anonymous R vector of doubles
 v = Float64[1.0,2.0,3.0]
 v_r = Rif.RArray{Float64,1}(v)
-elt = v_r[int32(1)]
+elt = v_r[1]
 
 # new anonymous R vector of strings
 v = ["abc","def","ghi"]
 v_r = Rif.RArray{ASCIIString,1}(v)
-elt = v_r[int32(1)]
+elt = v_r[1]
 
 
 # R's global environment
@@ -30,10 +30,10 @@ ge["foo"] = v_r
 
 # get an R object, starting the search from a given environment
 # (here from GlobalEnv, so like it would be from the R console)
-lt = Rif.get(ge, "letters")
+letters = Rif.get(ge, "letters")
 
 # use Julia's "map()"
-Rif.map(lt, (x)->"letter "x)
+Rif.map(letters, (x)->"letter "x)
 
 # get the R function 'date()'
 r_date = Rif.get(ge, "date")
@@ -48,7 +48,7 @@ res_version = Rif.call(r_version, [], [], ge)
 # get the function "toupper" (turns string to upper case)
 r_toupper = Rif.get(ge, "toupper")
 # call it with a blank-name parameter
-res_toup = Rif.call(r_toupper, [lt,], ["",], ge)
+res_toup = Rif.call(r_toupper, [letters,], ["",], ge)
 
 # get the function 'mean()'
 r_mean = Rif.get(ge, "mean")

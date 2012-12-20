@@ -111,7 +111,14 @@ const _rl_map_jtor = {
     Any => VECSXP
                      }
 
+macro _RL_RTYPE(c_ptr)
+    quote
+        ccall(dlsym(libri, :Sexp_typeof), Int,
+              (Ptr{Void},), $c_ptr)
+    end
+end
 
+#FIXME: is there any user for this in the end ?
 RVectorTypes = Union(Bool, Int32, Float64, ASCIIString)
 
 abstract Sexp
@@ -129,14 +136,12 @@ function named(sexp::Sexp)
 end
 
 function rtype(sexp::Sexp)
-    res =  ccall(dlsym(libri, :Sexp_typeof), Int,
-                 (Ptr{Void},), sexp.sexp)
+    res::Int =  @_RL_RTYPE(sexp.sexp)
     return res
 end
 
 function _rtype(sexp_ptr::Ptr{Void})
-    res =  ccall(dlsym(libri, :Sexp_typeof), Int,
-                 (Ptr{Void},), sexp_ptr)
+    res::Int =  @_RL_RTYPE(sexp_ptr)
     return res
 end
 
@@ -153,7 +158,7 @@ macro librinterface_vector_new(v, classname, celltype)
                       (Ptr{$celltype}, Int32),
                       v, length(v))
         obj = new(c_ptr)
-        finalizer(obj, librinterface_finalizer)
+        #finalizer(obj, librinterface_finalizer)
         obj
     end
 end
@@ -422,18 +427,25 @@ end
 
 ## # FIXME: a conversion would be possible ?
 const _rl_dispatch = {
-    3 => RFunction,
-    4 => REnvironment,
-    13 => RArray{Int32},
-    14 => RArray{Float64},
-    16 => RArray{ASCIIString},
-    19 => RArray{Sexp}
-                      }
+    CLOSXP => RFunction,
+    ENVSXP => REnvironment,
+    INTSXP => RArray,
+    REALSXP => RArray,
+    STRSXP => RArray,
+    VECSXP => RArray
+    }
 
 function _factory(c_ptr::Ptr{Void})
-    rtype::Int =  ccall(dlsym(libri, :Sexp_typeof), Int,
-                   (Ptr{Void},), c_ptr)
-    res = _rl_dispatch[rtype](c_ptr)
+    rtype::Int =  @_RL_RTYPE(c_ptr)
+    jtype = _rl_dispatch[rtype]
+    if jtype == RArray
+        ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
+                            (Ptr{Void},), c_ptr)
+        println(ndims)
+        res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr)
+    else
+        res = jtype(c_ptr)
+    end
     return res
 end
 
@@ -443,7 +455,7 @@ function get(environment::REnvironment, symbol::ASCIIString)
                  (Ptr{Void}, Ptr{Uint8}),
                 environment.sexp, symbol)
     # evaluate if promise
-    if _rtype(c_ptr) == PROMSXP
+    if (@_RL_RTYPE(c_ptr)) == PROMSXP
         c_ptr = ccall(dlsym(libri, :Sexp_evalPromise), Ptr{Void},
                       (Ptr{Void},), c_ptr)
     end
