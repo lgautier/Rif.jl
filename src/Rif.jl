@@ -14,19 +14,31 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        Rinenv, @R,
        Rrequire
 
-       
+
+_do_rebuild = false
 dllname = julia_pkgdir() * "/Rif/deps/librinterface.so"
-if !isfile(dllname)
-    println("*****************************************************")
-    println("Can't find librinterface.so; attempting to compile...")
-    println("*****************************************************")
-    cd(julia_pkgdir() * "/Rif/deps") do
-        run(`make all`) 
+csourcename = julia_pkgdir() * "/Rif/deps/librinterface.c"
+if isfile(dllname)
+    if Base.stat(dllname).mtime < Base.stat(csourcename).mtime
+        println("**********************************************************")
+        println("librinterface.so is older than librinterface; compiling...")
+        println("**********************************************************")
+        _do_rebuild = true
     end
-    println("*****************************************************")
-    println("Compiling complete")
-    println("*****************************************************")
+else
+    println("*********************************************************")
+    println("Can't find librinterface.so; attempting to compile...    ")
+    println("*********************************************************")
+    _do_rebuild = true
 end    
+if _do_rebuild
+    cd(julia_pkgdir() * "/Rif/deps") do
+    run(`make all`) 
+    end
+    println("*********************************************************")
+    println("Compiling complete")
+    println("*********************************************************")
+end
 
 libri = dlopen(julia_pkgdir() * "/Rif/deps/librinterface")
 
@@ -172,9 +184,6 @@ type RArray{T, N} <: Sexp
         end
         new(c_ptr)
     end
-    #function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
-    #    error("Not yet implemented")
-    #end
     function RArray{T<:Bool}(v::Array{T,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
@@ -201,7 +210,7 @@ type RArray{T, N} <: Sexp
         v_p = map((x)->pointer(x.data), v)
         @librinterface_vector_new v_p SexpStrVector Uint8
     end
-    function RArray{T <: Sexp}(v::Vector{T,1})
+    function RArray{T <: Sexp}(v::Array{T,1})
         #FIXME: add constructor that builds R vectors
         #       (ideally using conversion functions)
         v_p = map((x)->pointer(x.sexp), v)
@@ -210,6 +219,9 @@ type RArray{T, N} <: Sexp
 
 end    
 
+function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
+    error("Not yet implemented")
+end
 
 
 function length(sexp::RArray)
@@ -442,7 +454,7 @@ function _factory(c_ptr::Ptr{Void})
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
                             (Ptr{Void},), c_ptr)
         println(ndims)
-        res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr)
+        res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr, rtype)
     else
         res = jtype(c_ptr)
     end
