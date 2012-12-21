@@ -384,7 +384,7 @@ int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
 SEXP
 SexpDoubleVector_new(double *v, int n) {
   if (! RINTERF_ISREADY()) {
-    printf("R is not ready ready.\n");
+    printf("R is not ready.\n");
     return NULL;
   }
   SEXP sexp = NEW_NUMERIC(n);
@@ -406,7 +406,7 @@ SexpDoubleVector_new(double *v, int n) {
 SEXP
 SexpStrVector_new(char **v, int n) {
   if (! RINTERF_ISREADY()) {
-    printf("R is not ready ready.\n");
+    printf("R is not ready.\n");
     return NULL;
   }
   SEXP sexp = NEW_CHARACTER(n);
@@ -418,6 +418,7 @@ SexpStrVector_new(char **v, int n) {
   SEXP str_R;
   int i;
   for (i = 0; i < n; i++) {
+    printf("-->%s\n", v[i]);
     str_R = mkChar(v[i]);
     SET_STRING_ELT(sexp, i, str_R);
   }
@@ -430,7 +431,7 @@ SexpStrVector_new(char **v, int n) {
 SEXP
 SexpIntVector_new(int *v, int n) {
   if (! RINTERF_ISREADY()) {
-    printf("R is not ready ready.\n");
+    printf("R is not ready.\n");
     return NULL;
   }
   SEXP sexp = NEW_INTEGER(n);
@@ -459,7 +460,7 @@ SexpIntVector_ptr(SEXP sexp) {
 SEXP
 SexpBoolVector_new(int *v, int n) {
   if (! RINTERF_ISREADY()) {
-    printf("R is not ready ready.\n");
+    printf("R is not ready.\n");
     return NULL;
   }
   SEXP sexp = NEW_LOGICAL(n);

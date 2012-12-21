@@ -182,7 +182,7 @@ macro librinterface_vector_new(v, classname, celltype)
                       (Ptr{$celltype}, Int32),
                       v, length(v))
         obj = new(c_ptr)
-        #finalizer(obj, librinterface_finalizer)
+        finalizer(obj, librinterface_finalizer)
         obj
     end
 end
@@ -218,17 +218,17 @@ type RArray{T, N} <: Sexp
     end
     function RArray{T <: ASCIIString}(v::Array{T,1})
         v_p = map((x)->pointer(x.data), v)
-        @librinterface_vector_new v_p SexpStrVector Uint8
+        @librinterface_vector_new v_p SexpStrVector Ptr{Uint8}
     end
     function RArray{T <: ASCIIString}(v::Array{T,2})
         v_p = map((x)->pointer(x.data), v)
-        @librinterface_vector_new v_p SexpStrVector Uint8
+        @librinterface_vector_new v_p SexpStrVector Ptr{Uint8}
     end
     function RArray{T <: Sexp}(v::Array{T,1})
         #FIXME: add constructor that builds R vectors
         #       (ideally using conversion functions)
         v_p = map((x)->pointer(x.sexp), v)
-        @librinterface_vector_new v_p SexpVecVector Void
+        @librinterface_vector_new v_p SexpVecVector Ptr{Void}
     end
 
 end    
@@ -295,7 +295,7 @@ end
 function ref(x::RArray{ASCIIString, 1}, i::Int64)
     i = int32(i)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
-    bytestring(c_ptr)
+    c_ptr
  end
 
 function ref(x::RArray{Sexp}, i::Int64)
