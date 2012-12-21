@@ -260,7 +260,12 @@ Sexp_ndims(const SEXP sexp) {
   if (! RINTERF_ISREADY()) {
     return -1;
   }
-  int res = LENGTH(GET_DIM(sexp));
+  SEXP dims = getAttrib(sexp, R_DimSymbol);
+  int res;
+  if (Rf_isNull(dims))
+    res = 1;
+  else
+    res = LENGTH(dims);
   return res;
 }
 
