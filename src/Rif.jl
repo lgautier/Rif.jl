@@ -8,7 +8,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArray,
        ref, assign, map, del,
-       call, names,
+       call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
        Rinenv, @R,
@@ -123,7 +123,7 @@ const _rl_map_jtor = {
     Any => VECSXP
                      }
 
-macro _RL_RTYPE(c_ptr)
+macro _RL_RTYPEOF(c_ptr)
     quote
         ccall(dlsym(libri, :Sexp_typeof), Int,
               (Ptr{Void},), $c_ptr)
@@ -147,13 +147,25 @@ function named(sexp::Sexp)
     return res
 end
 
-function rtype(sexp::Sexp)
-    res::Int =  @_RL_RTYPE(sexp.sexp)
+function named(sexp::Sexp)
+    res =  ccall(dlsym(libri, :Sexp_named), Int,
+                 (Ptr{Void},), sexp)
     return res
 end
 
-function _rtype(sexp_ptr::Ptr{Void})
-    res::Int =  @_RL_RTYPE(sexp_ptr)
+function rtypeof(sexp::Sexp)
+    res::Int =  @_RL_RTYPEOF(sexp.sexp)
+    return res
+end
+
+function _rtypeof(sexp_ptr::Ptr{Void})
+    res::Int =  @_RL_RTYPEOF(sexp_ptr)
+    return res
+end
+
+function ndims(sexp::Sexp)
+    res =  ccall(dlsym(libri, :Sexp_ndims), Int,
+                 (Ptr{Void},), sexp)
     return res
 end
 
@@ -177,13 +189,15 @@ end
 
 type RArray{T, N} <: Sexp
     sexp::Ptr{Void}
-    function RArray(c_ptr::Ptr{Void}, T::Type)
-        if _rtype(c_ptr) != _rl_map_jtor[T]
+
+    function RArray(c_ptr::Ptr{Void})
+        if _rtypeof(c_ptr) != _rl_map_jtor[T]
             error("Incompatible type (expected ", _rl_map_jtor[T],
-                  ", get ", _rtype(c_ptr), ").")
+                  ", get ", _rtypeof(c_ptr), ").")
         end
         new(c_ptr)
     end
+    
     function RArray{T<:Bool}(v::Array{T,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
@@ -448,13 +462,13 @@ const _rl_dispatch = {
     }
 
 function _factory(c_ptr::Ptr{Void})
-    rtype::Int =  @_RL_RTYPE(c_ptr)
+    rtype::Int =  @_RL_RTYPEOF(c_ptr)
     jtype = _rl_dispatch[rtype]
     if jtype == RArray
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
                             (Ptr{Void},), c_ptr)
         println(ndims)
-        res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr, rtype)
+        res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr)
     else
         res = jtype(c_ptr)
     end
@@ -467,7 +481,7 @@ function get(environment::REnvironment, symbol::ASCIIString)
                  (Ptr{Void}, Ptr{Uint8}),
                 environment.sexp, symbol)
     # evaluate if promise
-    if (@_RL_RTYPE(c_ptr)) == PROMSXP
+    if (@_RL_RTYPEOF(c_ptr)) == PROMSXP
         c_ptr = ccall(dlsym(libri, :Sexp_evalPromise), Ptr{Void},
                       (Ptr{Void},), c_ptr)
     end
