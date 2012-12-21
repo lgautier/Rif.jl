@@ -282,8 +282,7 @@ end
 
 for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
-         (Float64, :SexpDoubleVector),
-         (ASCIIString, :SexpStrVector))
+         (Float64, :SexpDoubleVector))
     @eval begin
         function ref(x::RArray{$t[1], 1}, i::Int64)
             i = int32(i)
@@ -292,6 +291,12 @@ for t = ((Bool, :SexpBoolVector),
         end
     end
 end
+
+function ref(x::RArray{ASCIIString, 1}, i::Int64)
+    i = int32(i)
+    c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
+    bytestring(c_ptr)
+ end
 
 function ref(x::RArray{Sexp}, i::Int64)
     i = int32(i)
