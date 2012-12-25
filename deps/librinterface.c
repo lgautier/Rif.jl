@@ -415,7 +415,7 @@ int SexpBoolVector_getitem(const SEXP sexp, int i) {
     return -1;						\
   }							\
   rpointer(sexp)[i] = value;				\
-		return 0;				\
+  return 0;						\
 
 
 int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
@@ -430,26 +430,33 @@ int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
   RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
 }
 
+
+#define RINTERF_NEWVECTOR(rpointer, rconstructor, ctype)		\
+  if (! RINTERF_ISREADY()) {						\
+    printf("R is not ready.\n");					\
+    return NULL;							\
+    }									\
+  RStatus ^= RINTERF_IDLE;						\
+  SEXP sexp = rconstructor(n);						\
+  if (sexp == NULL) {							\
+    printf("Problem while creating R vector.\n");			\
+    RStatus ^= RINTERF_IDLE;						\
+    return sexp;							\
+  }									\
+  PROTECT(sexp);							\
+  ctype *sexp_p = rpointer(sexp);					\
+  int i;								\
+  for (i = 0; i < n; i++) {						\
+    sexp_p[i] = v[i];							\
+  }									\
+  R_PreserveObject(sexp);						\
+  UNPROTECT(1);								\
+  RStatus ^= RINTERF_IDLE;						\
+  return sexp;								\
+
 SEXP
 SexpDoubleVector_new(double *v, int n) {
-  if (! RINTERF_ISREADY()) {
-    printf("R is not ready.\n");
-    return NULL;
-  }
-  SEXP sexp = NEW_NUMERIC(n);
-  if (sexp == NULL) {
-    printf("Problem while creating R vector.\n");
-    return sexp;
-  }
-  PROTECT(sexp);
-  double *sexp_p = NUMERIC_POINTER(sexp);
-  int i;
-  for (i = 0; i < n; i++) {
-    sexp_p[i] = v[i];
-  }
-  R_PreserveObject(sexp);
-  UNPROTECT(1);
-  return sexp;
+  RINTERF_NEWVECTOR(NUMERIC_POINTER, NEW_NUMERIC, double)
 }
 
 SEXP
@@ -475,27 +482,9 @@ SexpStrVector_new(char **v, int n) {
   return sexp;
 }
 
-
 SEXP
-SexpIntVector_new(int *v, int n) {
-  if (! RINTERF_ISREADY()) {
-    printf("R is not ready.\n");
-    return NULL;
-  }
-  SEXP sexp = NEW_INTEGER(n);
-  if (sexp == NULL) {
-    printf("Problem while creating R vector.\n");
-    return sexp;
-  }
-  PROTECT(sexp);
-  int *sexp_p = INTEGER_POINTER(sexp);
-  int i;
-  for (i = 0; i < n; i++) {
-    sexp_p[i] = v[i];
-  }
-  R_PreserveObject(sexp);
-  UNPROTECT(1);
-  return sexp;
+SexpIntVector_new(double *v, int n) {
+  RINTERF_NEWVECTOR(INTEGER_POINTER, NEW_INTEGER, int)
 }
 
 int*
@@ -506,25 +495,8 @@ SexpIntVector_ptr(SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
-SexpBoolVector_new(int *v, int n) {
-  if (! RINTERF_ISREADY()) {
-    printf("R is not ready.\n");
-    return NULL;
-  }
-  SEXP sexp = NEW_LOGICAL(n);
-  if (sexp == NULL) {
-    printf("Problem while creating R vector.\n");
-    return sexp;
-  }
-  PROTECT(sexp);
-  int *sexp_p = LOGICAL_POINTER(sexp);
-  int i;
-  for (i = 0; i < n; i++) {
-    sexp_p[i] = v[i];
-  }
-  R_PreserveObject(sexp);
-  UNPROTECT(1);
-  return sexp;
+SexpBoolVector_new(double *v, int n) {
+  RINTERF_NEWVECTOR(LOGICAL_POINTER, NEW_LOGICAL, int)
 }
 
 
