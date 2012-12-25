@@ -121,13 +121,14 @@ const _rl_map_rtoj = {
     STRSXP => ASCIIString,
     VECSXP => Any
                       }
+                      
 const _rl_map_jtor = {
     Bool => LGLSXP,
     Int32 => INTSXP,
     Float64 => REALSXP,
     ASCIIString => STRSXP,
     Any => VECSXP
-                     }
+                      }
 
 macro _RL_TYPEOFR(c_ptr)
     quote
@@ -175,7 +176,7 @@ function length(sexp::Sexp)
     return res
 end
 
-function ndims{(sexp::Sexp)
+function ndims(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_ndims), Int,
                  (Ptr{Void},), sexp)
     return res
@@ -186,7 +187,7 @@ function convert{T <: Sexp}(::Type{Ptr{Void}}, x::T)
     x.sexp
 end
 
-
+               
 macro librinterface_vector_new(v, classname, celltype)
     local f = "$(classname)_new"
     quote
@@ -197,6 +198,19 @@ macro librinterface_vector_new(v, classname, celltype)
         finalizer(obj, librinterface_finalizer)
         obj
     end
+end
+
+macro librinterface_matrix_new(v, classname, celltype, nx, ny)
+    local f = "$(classname)_new"
+    quote
+        nx::Int64, ny::Int64 = ndims(v)
+        c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
+                      (Ptr{$celltype}, Int32, Int32),
+                      v, nx, ny)
+        obj = new(c_ptr)
+        finalizer(obj, librinterface_finalizer)
+        obj
+    end    
 end
 
 type RArray{T, N} <: Sexp
@@ -213,20 +227,20 @@ type RArray{T, N} <: Sexp
     function RArray{T<:Bool}(v::Array{T,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
-    function RArray{T<:Bool}(v::Array{T,2})
-        @librinterface_vector_new v SexpBoolVector Bool
+    function RArray{T<:Bool}(v::Array{T,2}, nx::Integer, ny::Integer)
+        @librinterface_matrix_new v SexpBoolVectorMatrix Bool nx ny
     end
     function RArray{T<:Int32}(v::Array{T,1})
         @librinterface_vector_new v SexpIntVector Int32
     end
-    function RArray{T<:Int32}(v::Array{T,2})
-        @librinterface_vector_new v SexpIntVector Int32
+    function RArray{T<:Int32}(v::Array{T,2}, nx::Integer, ny::Integer)
+        @librinterface_matrix_new v SexpIntVectorMatrix Int32 nx ny
     end
     function RArray{T<:Float64}(v::Array{T,1})
         @librinterface_vector_new v SexpDoubleVector Float64
     end
-    function RArray{T<:Float64}(v::Array{T,2})
-        @librinterface_vector_new v SexpDoubleVector Float64
+    function RArray{T<:Float64}(v::Array{T,2}, nx::Integer, ny::Integer)
+        @librinterface_matrix_new v SexpDoubleVectorMatrix Float64 nx ny
     end
     function RArray{T <: ASCIIString}(v::Array{T,1})
         v_p = map((x)->pointer(x.data), v)
@@ -298,6 +312,7 @@ macro librinterface_setitem(valuetype, classname, x, i, value)
     end
 end
 
+# Vectors
 for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
          (Float64, :SexpDoubleVector))
@@ -326,6 +341,62 @@ for t = ((Bool, :SexpBoolVector),
         end
     end
 end
+
+macro librinterface_getitem2(returntype, classname, x, i, j)
+    local f = "$(classname)_getitem"
+    quote
+       local res = ccall(dlsym(libri, $f), $returntype,
+                         (Ptr{Void}, Int32, Int32),
+                         $x.sexp, $i-1, $j-1)
+       if res == C_NULL
+           error("Error while getting element (", $i, ", ", $j, ").")
+       end
+       res
+    end
+end
+macro librinterface_setitem2(valuetype, classname, x, i, j, value)
+    local f = "$(classname)_setitem"
+    quote
+       local res = ccall(dlsym(libri, $f), Int32,
+                         (Ptr{Void}, Int32, Int32, $valuetype),
+                         $x.sexp, $i-1, $j-1, $value)
+       if res == -1
+           error("Error while setting element (", $i, ", ", $j, ").")
+       end
+       res
+    end
+end
+
+# Matrices (2D arrays)
+for t = ((Bool, :SexpBoolVectorMatrix),
+         (Int32, :SexpIntVectorMatrix),
+         (Float64, :SexpDoubleVectorMatrix))
+    @eval begin
+        # ref with Int64
+        function ref(x::RArray{$t[1], 2}, i::Int64, j::Int64)
+            i = int32(i)
+            res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
+            return res
+        end
+        # ref with Int32
+        function ref(x::RArray{$t[1], 2}, i::Int32, j::Int32)
+            res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
+            return res
+        end
+        # assign with Int64
+        function assign(x::RArray{$t[1], 2}, val::$t[1], i::Int64, j::Int64)
+            i = int32(i)
+            res = @librinterface_setitem2 $(t[1]) $(t[2]) x i j val
+            return res
+        end
+        # assign with Int32
+        function assign(x::RArray{$t[1], 2}, val::$t[1], i::Int32, j::Int32)
+            res = @librinterface_setitem2 $(t[1]) $(t[2]) x i j val
+            return res
+        end
+    end
+end
+
 
 # array of strings
 function ref(x::RArray{ASCIIString, 1}, i::Int64)

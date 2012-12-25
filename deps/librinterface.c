@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <R.h>
+#include <Rinternals.h>
 #include <Rinterface.h>
 #include <Rversion.h>
 #include <Rembedded.h>
@@ -391,15 +392,34 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
   int res = rpointer(sexp)[i];				\
 			  return res;			\
 
+#define RINTERF_IFROMIJ(sexp, i, j)		\
+  int nr = Rf_nrows(sexp);			\
+  i  = j * nr + i;				\
+
 double SexpDoubleVector_getitem(const SEXP sexp, int i) {
   RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
 }
 
+double SexpDoubleVectorMatrix_getitem(const SEXP sexp, int i, int j) {
+  RINTERF_IFROMIJ(sexp, i, j)
+  RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
+}
+
+
 int SexpIntVector_getitem(const SEXP sexp, int i) {
+  RINTERF_GETITEM(INTEGER_POINTER, INTSXP)
+}
+int SexpIntVectorMatrix_getitem(const SEXP sexp, int i, int j) {
+  RINTERF_IFROMIJ(sexp, i, j)
   RINTERF_GETITEM(INTEGER_POINTER, INTSXP)
 }
 
 int SexpBoolVector_getitem(const SEXP sexp, int i) {
+  RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP)
+}
+
+int SexpBoolVectorMatrix_getitem(const SEXP sexp, int i, int j) {
+  RINTERF_IFROMIJ(sexp, i, j)
   RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP)
 }
 
@@ -422,22 +442,37 @@ int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
 }
 
+int SexpDoubleVectorMatrix_setitem(const SEXP sexp, int i, int j, 
+				   double value) {
+  RINTERF_IFROMIJ(sexp, i, j)
+  RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
+}
+
+
 int SexpIntVector_setitem(const SEXP sexp, int i, int value) {
+  RINTERF_SETNUMITEM(INTEGER_POINTER, INTSXP)
+}
+int SexpIntVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
+  RINTERF_IFROMIJ(sexp, i, j)
   RINTERF_SETNUMITEM(INTEGER_POINTER, INTSXP)
 }
 
 int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
   RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
 }
+int SexpBoolVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
+  RINTERF_IFROMIJ(sexp, i, j)
+  RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
+}
 
 
-#define RINTERF_NEWVECTOR(rpointer, rconstructor, ctype)		\
+#define RINTERF_NEWVECTOR(rpointer, rconstructor_call, ctype)		\
   if (! RINTERF_ISREADY()) {						\
     printf("R is not ready.\n");					\
     return NULL;							\
     }									\
   RStatus ^= RINTERF_IDLE;						\
-  SEXP sexp = rconstructor(n);						\
+  SEXP sexp = rconstructor_call;					\
   if (sexp == NULL) {							\
     printf("Problem while creating R vector.\n");			\
     RStatus ^= RINTERF_IDLE;						\
@@ -456,7 +491,13 @@ int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
 
 SEXP
 SexpDoubleVector_new(double *v, int n) {
-  RINTERF_NEWVECTOR(NUMERIC_POINTER, NEW_NUMERIC, double)
+  RINTERF_NEWVECTOR(NUMERIC_POINTER, NEW_NUMERIC(n), double)
+}
+
+SEXP
+SexpDoubleVectorMatrix_new(double *v, int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR(NUMERIC_POINTER, allocMatrix(REALSXP, nx, ny), double)
 }
 
 SEXP
@@ -465,9 +506,11 @@ SexpStrVector_new(char **v, int n) {
     printf("R is not ready.\n");
     return NULL;
   }
+  RStatus ^= RINTERF_IDLE;
   SEXP sexp = NEW_CHARACTER(n);
   if (sexp == NULL) {
     printf("Problem while creating R vector.\n");
+    RStatus ^= RINTERF_IDLE;
     return sexp;
   }
   PROTECT(sexp);
@@ -479,12 +522,19 @@ SexpStrVector_new(char **v, int n) {
   }
   R_PreserveObject(sexp);
   UNPROTECT(1);
+  RStatus ^= RINTERF_IDLE;
   return sexp;
 }
 
 SEXP
 SexpIntVector_new(double *v, int n) {
-  RINTERF_NEWVECTOR(INTEGER_POINTER, NEW_INTEGER, int)
+  RINTERF_NEWVECTOR(INTEGER_POINTER, NEW_INTEGER(n), int)
+}
+
+SEXP
+SexpIntVectorMatrix_new(int *v, int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR(INTEGER_POINTER, allocMatrix(INTSXP, nx, ny), int)
 }
 
 int*
@@ -496,7 +546,13 @@ SexpIntVector_ptr(SEXP sexp) {
 /* Return NULL on failure */
 SEXP
 SexpBoolVector_new(double *v, int n) {
-  RINTERF_NEWVECTOR(LOGICAL_POINTER, NEW_LOGICAL, int)
+  RINTERF_NEWVECTOR(LOGICAL_POINTER, NEW_LOGICAL(n), int)
+}
+
+SEXP
+SexpBoolVectorMatrix_new(int *v, int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR(LOGICAL_POINTER, allocMatrix(LGLSXP, nx, ny), int)
 }
 
 
