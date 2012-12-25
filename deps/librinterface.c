@@ -339,7 +339,7 @@ char* SexpStrVector_getitem(const SEXP sexp, int i) {
     printf("Not an R vector of type STRSXP.\n");
     return NULL;
   }
-  if (i >= LENGTH(sexp)) {
+  if ((i < 0) || (i >= LENGTH(sexp))) {
     printf("Out-of-bound.\n");
     /*FIXME: return int or NULL ?*/
     return NULL;
@@ -364,7 +364,7 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
     printf("Not an R vector of type STRSXP.\n");
     return -1;
   }
-  if (i >= LENGTH(sexp)) {
+  if ((i < 0) || (i >= LENGTH(sexp))) {
     printf("Out-of-bound.\n");
     /*FIXME: return int or NULL ?*/
     return -1;
@@ -383,7 +383,7 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
     /*FIXME: return int or NULL ?*/			\
     return 0;						\
   }							\
-  if (i >= LENGTH(sexp)) {				\
+  if ((i < 0) || (i >= LENGTH(sexp))) {			\
     printf("Out-of-bound.\n");				\
     /*FIXME: return int or NULL ?*/			\
     return 0;						\
@@ -467,7 +467,6 @@ SexpStrVector_new(char **v, int n) {
   SEXP str_R;
   int i;
   for (i = 0; i < n; i++) {
-    printf("-->%s\n", v[i]);
     str_R = mkChar(v[i]);
     SET_STRING_ELT(sexp, i, str_R);
   }
