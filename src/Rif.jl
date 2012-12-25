@@ -533,8 +533,8 @@ type RFunction <: Sexp
 end
 
 function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
-                         argn::Vector{U},
-                         env::REnvironment)
+                                           argn::Vector{U},
+                                           env::REnvironment)
     argv_p = map((x)->x.sexp, argv)
     argn_p = map((x)->pointer(x.data), argn)
     c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
@@ -542,6 +542,18 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
                   f.sexp, argv_p, length(argv), argn_p, env.sexp)
     return _factory(c_ptr)
 end
+
+function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
+                                           argn::Vector{U})
+    ge::REnvironment = getGlobalEnv()
+    call(f, argv, argn, ge)
+end
+
+function call(f::RFunction)
+    ge::REnvironment = getGlobalEnv()
+    call(f, [], [], ge)
+end
+
 
 type RExpression <: Sexp
     sexp::Ptr{Void}
