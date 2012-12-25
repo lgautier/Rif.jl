@@ -248,7 +248,7 @@ type RArray{T, N} <: Sexp
     end
     function RArray{T <: ASCIIString}(v::Array{T,2})
         v_p = map((x)->pointer(x.data), v)
-        @librinterface_vector_new v_p SexpStrVector Ptr{Uint8}
+        @librinterface_matrix_new v_p SexpStrVectorMatrix Ptr{Uint8} nx ny
     end
     function RArray{T <: Sexp}(v::Array{T,1})
         #FIXME: add constructor that builds R vectors
@@ -374,6 +374,7 @@ for t = ((Bool, :SexpBoolVectorMatrix),
         # ref with Int64
         function ref(x::RArray{$t[1], 2}, i::Int64, j::Int64)
             i = int32(i)
+            j = int32(j)
             res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
             return res
         end
@@ -385,6 +386,7 @@ for t = ((Bool, :SexpBoolVectorMatrix),
         # assign with Int64
         function assign(x::RArray{$t[1], 2}, val::$t[1], i::Int64, j::Int64)
             i = int32(i)
+            j = int32(j)
             res = @librinterface_setitem2 $(t[1]) $(t[2]) x i j val
             return res
         end
@@ -403,6 +405,13 @@ function ref(x::RArray{ASCIIString, 1}, i::Int64)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
     bytestring(c_ptr)
 end
+function ref(x::RArray{ASCIIString, 2}, i::Int64, j::Int64)
+    i = int32(i)
+    j = int32(j)
+    c_ptr = @librinterface_getitem2 Ptr{Uint8} SexpStrVectorMatrix x i j
+    bytestring(c_ptr)
+end
+
 function ref(x::RArray{ASCIIString, 1}, i::Int32)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
     bytestring(c_ptr)
