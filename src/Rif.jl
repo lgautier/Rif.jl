@@ -272,9 +272,8 @@ end
 function map(sexp::RArray, func::Function)
     n = length(sexp)
     res = cell(n)
-    i = 0
-    #FIXME: 1-offset indexing for Julia arrays !
-    while i < n
+    i = 1
+    while i <= n
         res[i+1] = func(sexp[i])
         i += 1
     end
