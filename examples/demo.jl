@@ -20,6 +20,13 @@ elt = v_r[1]
 v = ["abc","def","ghi"]
 v_r = Rif.RArray{ASCIIString,1}(v)
 elt = v_r[1]
+v_r[1]
+
+# new anonymous R matrix of integers
+v = Int32[1,2,3,4,5,6]
+v_r = Rif.RArray{Int32,2}(v)
+elt = v_r[1,1]
+v_r[1,1] = int32(10)
 
 
 # R's global environment
@@ -63,16 +70,5 @@ r_iris = Rif.get(ge, "iris")
 # get names
 colnames = Rif.names(r_iris)
 
-# And now a funky macro. With it,
-# just put `R` in front of the double quotes
-# to evaluate the string as R code
-# (the evaluation is in R's "global environment")
-macro R_str(x)
-    quote
-        @Rif.R_str $x
-    end
-end
 
-letters = R"letters"
-rndvector = R"rlnorm(10)"
 
