@@ -558,13 +558,42 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
     call(f, argv, argn, ge)
 end
 
-function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T})
+function call{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
+                                    argkv::Dict{ASCIIString, S})
+    ge::REnvironment = getGlobalEnv()
+    n_v = length(argv)
+    n_kv = length(argkv)
+    n = n_v + n_kv
+    c_argv = Array(Sexp, n)
+    c_argn = Array(ASCIIString, n)
+    i = 1
+    for elt in argv
+        c_argv[i] = elt
+        c_argn[i] = ""
+        i += 1
+    end
+    for elt in pairs(argkv)
+        c_argn[i] = elt[1]
+        c_argv[i] = elt[2]
+        i += 1
+    end
+    call(f, c_argv, c_argn, ge)
+end
+
+function call{T <: Sexp, S <: Sexp}(f::RFunction,
+                                    argkv::Dict{ASCIIString, S})
+    call(f::RFunction, [],
+         argkv::Dict{ASCIIString, S})
+end
+
+function call{T <: Sexp}(f::RFunction, argv::Vector{T})
     ge = getGlobalEnv()
-    argn = Array(ASCIIString, length(argv))
-    i::Integer = 1
     n::Integer = length(argv)
+    argn = Array(ASCIIString, n)
+    i::Integer = 1
     while i <= n
         argn[i] = ""
+        i += 1
     end
     call(f, argv, argn, ge)
 end
