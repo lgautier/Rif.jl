@@ -175,7 +175,7 @@ function length(sexp::Sexp)
     return res
 end
 
-function ndims(sexp::Sexp)
+function ndims{(sexp::Sexp)
     res =  ccall(dlsym(libri, :Sexp_ndims), Int,
                  (Ptr{Void},), sexp)
     return res
@@ -277,9 +277,22 @@ macro librinterface_getitem(returntype, classname, x, i)
     quote
        local res = ccall(dlsym(libri, $f), $returntype,
                          (Ptr{Void}, Int32),
-                         $x.sexp, $i)
+                         $x.sexp, $i-1)
        if res == C_NULL
            error("Error while getting element ", $i, ".")
+       end
+       res
+    end
+end
+
+macro librinterface_setitem(valuetype, classname, x, i, value)
+    local f = "$(classname)_setitem"
+    quote
+       local res = ccall(dlsym(libri, $f), Int32,
+                         (Ptr{Void}, Int32, $valuetype),
+                         $x.sexp, $i-1, $value)
+       if res == -1
+           error("Error while setting element ", $i, ".")
        end
        res
     end
@@ -289,62 +302,62 @@ for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
          (Float64, :SexpDoubleVector))
     @eval begin
+        # ref with Int64
         function ref(x::RArray{$t[1], 1}, i::Int64)
             i = int32(i)
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
             return res
         end
+        # ref with Int32
+        function ref(x::RArray{$t[1], 1}, i::Int32)
+            res = @librinterface_getitem $(t[1]) $(t[2]) x i
+            return res
+        end
+        # assign with Int64
+        function assign(x::RArray{$t[1], 1}, val::$t[1], i::Int64)
+            i = int32(i)
+            res = @librinterface_setitem $(t[1]) $(t[2]) x i val
+            return res
+        end
+        # assign with Int32
+        function assign(x::RArray{$t[1], 1}, val::$t[1], i::Int32)
+            res = @librinterface_setitem $(t[1]) $(t[2]) x i val
+            return res
+        end
     end
 end
 
+# array of strings
 function ref(x::RArray{ASCIIString, 1}, i::Int64)
     i = int32(i)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
     bytestring(c_ptr)
- end
-
-function ref(x::RArray{Sexp}, i::Int64)
-    i = int32(i)
-    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
-    _factory(c_ptr)
 end
-
-macro librinterface_setitem(valuetype, classname, x, i, value)
-    local f = "$(classname)_setitem"
-    quote
-       local res = ccall(dlsym(libri, $f), Int32,
-                         (Ptr{Void}, Int32, $valuetype),
-                         $x.sexp, $i, $value)
-       if res == -1
-           error("Error while setting element ", $i, ".")
-       end
-       res
-    end
+function ref(x::RArray{ASCIIString, 1}, i::Int32)
+    c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
+    bytestring(c_ptr)
 end
-
-function assign(x::RArray{Bool}, val::Bool, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Bool SexpBoolVector x i val
-    return res
-end
-
-function assign(x::RArray{Int32}, val::Int32, i::Int64)
-    i::Int32 = int32(i)
-    res = @librinterface_setitem Int32 SexpIntVector x i val
-    return res
-end
-
-function assign(x::RArray{Float64}, val::Float64, i::Int64)
-    i = int32(i)
-    res = @librinterface_setitem Float64 SexpIntVector x i val
-    return res
-end
-
 function assign(x::RArray{ASCIIString}, val::ASCIIString, i::Int64)
     i = int32(i)
     res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
     return res
 end
+function assign(x::RArray{ASCIIString}, val::ASCIIString, i::Int32)
+    res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
+    return res
+end
+
+# list
+function ref(x::RArray{Sexp}, i::Int64)
+    i = int32(i)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i-1
+    _factory(c_ptr)
+end
+function ref(x::RArray{Sexp}, i::Int32)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i-1
+    _factory(c_ptr)
+end
+
 
 macro librinterface_getvalue(returntype, classname, x, i)
     local f = "$(classname)_getvalue"
