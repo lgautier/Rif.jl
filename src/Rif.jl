@@ -543,9 +543,21 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
     return _factory(c_ptr)
 end
 
+
 function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
                                            argn::Vector{U})
     ge::REnvironment = getGlobalEnv()
+    call(f, argv, argn, ge)
+end
+
+function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T})
+    ge = getGlobalEnv()
+    argn = Array(ASCIIString, length(argv))
+    i::Integer = 1
+    n::Integer = length(argv)
+    while i <= n
+        argn[i] = ""
+    end
     call(f, argv, argn, ge)
 end
 
@@ -580,6 +592,9 @@ const _rl_dispatch = {
 
 function _factory(c_ptr::Ptr{Void})
     rtype::Int =  @_RL_TYPEOFR(c_ptr)
+    if rtype == NILSXP
+        return None
+    end
     jtype = _rl_dispatch[rtype]
     if jtype == RArray
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
