@@ -39,6 +39,7 @@ Rif.map(letters, (x)->"letter "x)
 r_date = Rif.get(ge, "date")
 # call it without parameters
 res_date = Rif.call(r_date, [], [], ge)
+res_date[0]
 
 # get the R function 'R.Version()'
 r_version = Rif.get(ge, "R.Version")
@@ -53,7 +54,7 @@ res_toup = Rif.call(r_toupper, [letters,], ["",], ge)
 # get the function 'mean()'
 r_mean = Rif.get(ge, "mean")
 v = Int32[1,2,3]
-v_r = Rif.RArrayInt32(v)
+v_r = Rif.RArray{Int32, 1}(v)
 # call it with a named parameter
 res_mean = Rif.call(r_mean, [v_r,], ["x",], ge)
 
@@ -62,12 +63,16 @@ r_iris = Rif.get(ge, "iris")
 # get names
 colnames = Rif.names(r_iris)
 
-# R macro, does like you'd get in an R console
-pi = @Rif.R(:pi)
-# in R, there are no scalars only vector
-pi = pi.value[0]
+# And now a funky macro. With it,
+# just put `R` in front of the double quotes
+# to evaluate the string as R code
+# (the evaluation is in R's "global environment")
+macro R_str(x)
+    quote
+        @Rif.R_str $x
+    end
+end
 
-
-@Rif.R(:paste)(:letters))
-
+letters = R"letters"
+rndvector = R"rlnorm(10)"
 

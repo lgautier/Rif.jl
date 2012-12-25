@@ -6,6 +6,7 @@
 #include <Rversion.h>
 #include <Rembedded.h>
 #include <Rdefines.h>
+#include <R_ext/Parse.h>
 #ifdef HAS_READLINE
 #include <readline/readline.h>
 #endif
@@ -214,6 +215,53 @@ EmbeddedR_init(void) {
   return 0;
 }
 
+/* Parse a string as R code.
+   Return NULL on error */
+SEXP
+EmbeddedR_parse(char *string) {
+  if (! RINTERF_ISREADY()) {
+    return NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  ParseStatus status;
+  SEXP cmdSexp, cmdExpr;
+  PROTECT(cmdSexp = allocVector(STRSXP, 1));
+  SET_STRING_ELT(cmdSexp, 0, mkChar(string));
+  PROTECT(cmdExpr = R_ParseVector(cmdSexp, -1, &status, R_NilValue));
+  if (status != PARSE_OK) {
+    UNPROTECT(2);
+    RStatus ^= RINTERF_IDLE;
+    return NULL;
+  }
+  R_PreserveObject(cmdExpr);
+  UNPROTECT(2);
+  RStatus ^= RINTERF_IDLE;
+  return cmdExpr;
+}
+
+/* Evaluate an expression (EXPRSXP, such as one that would
+   be returned by Embedded_parse()) in an environment.
+   Return NULL on error */
+SEXP
+EmbeddedR_eval(SEXP expression, SEXP envir) {
+  if (! RINTERF_ISREADY()) {
+    return NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  SEXP res = R_NilValue;
+  int errorOccurred = 0;
+  int i;
+  for(i = 0; i < LENGTH(expression); i++) {
+    //res = R_tryEval(VECTOR_ELT(expression,0), envir, &errorOccurred);
+    res = Rf_eval(VECTOR_ELT(expression, 0), envir);
+  }
+  if (errorOccurred) {
+    res = NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  return res;
+}
+
 /* Return -1 on failure */
 int
 Sexp_named(const SEXP sexp) {
@@ -234,6 +282,7 @@ Sexp_typeof(const SEXP sexp) {
   return res;
 }
 
+/* Return -1 on failure */
 int
 Sexp_length(const SEXP sexp) {
   if (! RINTERF_ISREADY()) {

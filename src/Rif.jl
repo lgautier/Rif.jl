@@ -11,8 +11,13 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
-       Rinenv, @R,
-       Rrequire
+       parser,
+       Rinenv,
+       Rrequire,
+       # macros
+       @R,
+       @R_str,
+       @_RL_TYPEOFR
 
 
 _do_rebuild = false
@@ -106,6 +111,7 @@ const INTSXP  = uint(13)
 const REALSXP  = uint(14)
 const STRSXP  = uint(16)
 const VECSXP  = uint(19)
+const EXPRSXP = uint(20)
 const S4SXP  = uint(25)
 
 const _rl_map_rtoj = {
@@ -123,7 +129,7 @@ const _rl_map_jtor = {
     Any => VECSXP
                      }
 
-macro _RL_RTYPEOF(c_ptr)
+macro _RL_TYPEOFR(c_ptr)
     quote
         ccall(dlsym(libri, :Sexp_typeof), Int,
               (Ptr{Void},), $c_ptr)
@@ -153,13 +159,19 @@ function named(sexp::Sexp)
     return res
 end
 
-function rtypeof(sexp::Sexp)
-    res::Int =  @_RL_RTYPEOF(sexp.sexp)
+function typeofr(sexp::Sexp)
+    res::Int =  @_RL_TYPEOFR(sexp.sexp)
     return res
 end
 
-function _rtypeof(sexp_ptr::Ptr{Void})
-    res::Int =  @_RL_RTYPEOF(sexp_ptr)
+function _typeofr(sexp_ptr::Ptr{Void})
+    res::Int =  @_RL_TYPEOFR(sexp_ptr)
+    return res
+end
+
+function length(sexp::Sexp)
+    res =  ccall(dlsym(libri, :Sexp_length), Int,
+                 (Ptr{Void},), sexp)
     return res
 end
 
@@ -191,9 +203,9 @@ type RArray{T, N} <: Sexp
     sexp::Ptr{Void}
 
     function RArray(c_ptr::Ptr{Void})
-        if _rtypeof(c_ptr) != _rl_map_jtor[T]
+        if _typeofr(c_ptr) != _rl_map_jtor[T]
             error("Incompatible type (expected ", _rl_map_jtor[T],
-                  ", get ", _rtypeof(c_ptr), ").")
+                  ", get ", _typeofr(c_ptr), ").")
         end
         new(c_ptr)
     end
@@ -235,13 +247,6 @@ end
 
 function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
     error("Not yet implemented")
-end
-
-
-function length(sexp::RArray)
-    res =  ccall(dlsym(libri, :Sexp_length), Int,
-                 (Ptr{Void},), sexp)
-    return res
 end
 
 function names(sexp::RArray)
@@ -295,7 +300,7 @@ end
 function ref(x::RArray{ASCIIString, 1}, i::Int64)
     i = int32(i)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
-    c_ptr
+    bytestring(c_ptr)
  end
 
 function ref(x::RArray{Sexp}, i::Int64)
@@ -454,12 +459,23 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
     return _factory(c_ptr)
 end
 
-
+type RExpression <: Sexp
+    sexp::Ptr{Void}
+    function RExpression(x::Sexp)
+        new(x)
+    end
+    function RExpression(x::Ptr{Void})
+        new(x)
+    end    
+end
 
 ## # FIXME: a conversion would be possible ?
 const _rl_dispatch = {
     CLOSXP => RFunction,
+    BUILTINSXP => RFunction,
     ENVSXP => REnvironment,
+    EXPRSXP => RExpression,
+    LGLSXP => RArray,
     INTSXP => RArray,
     REALSXP => RArray,
     STRSXP => RArray,
@@ -467,12 +483,11 @@ const _rl_dispatch = {
     }
 
 function _factory(c_ptr::Ptr{Void})
-    rtype::Int =  @_RL_RTYPEOF(c_ptr)
+    rtype::Int =  @_RL_TYPEOFR(c_ptr)
     jtype = _rl_dispatch[rtype]
     if jtype == RArray
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
                             (Ptr{Void},), c_ptr)
-        println(ndims)
         res = RArray{_rl_map_rtoj[rtype], ndims}(c_ptr)
     else
         res = jtype(c_ptr)
@@ -486,7 +501,7 @@ function get(environment::REnvironment, symbol::ASCIIString)
                  (Ptr{Void}, Ptr{Uint8}),
                 environment.sexp, symbol)
     # evaluate if promise
-    if (@_RL_RTYPEOF(c_ptr)) == PROMSXP
+    if (@_RL_TYPEOFR(c_ptr)) == PROMSXP
         c_ptr = ccall(dlsym(libri, :Sexp_evalPromise), Ptr{Void},
                       (Ptr{Void},), c_ptr)
     end
@@ -500,19 +515,47 @@ type NamedValue
 end
 
 
+function parser(x::ASCIIString)
+    c_ptr = ccall(dlsym(libri, :EmbeddedR_parse),
+                  Ptr{Void},
+                  (Ptr{Uint8},),
+                  x)
+    return _factory(c_ptr)
+end
+
+function evalr(x::RExpression)
+    ge = getGlobalEnv()
+    c_ptr = ccall(dlsym(libri, :EmbeddedR_eval),
+                  Ptr{Void},
+                  (Ptr{Void}, Ptr{Void}),
+                  x.sexp, ge.sexp)
+    if c_ptr == C_NULL
+        error("Error evaluating the R expression.")
+    end
+    return _factory(c_ptr)
+end
+
 function Rinenv(sym::Symbol, env::REnvironment)
     return NamedValue("$sym", get(env, "$sym"))
 end
 # FIXME: if not symbol, means a local Julia variable ?
 
+
+macro R_str(name)
+    quote
+        local e = parser($name)
+        evalr(e)
+    end
+end
+
 function Rinenv(expr::Expr, env::REnvironment)
     if expr.head == :call
         print("Call: ")
         # function call
-        func_sym = expr.args[1]
+        func_sym = expr.args[1].head
         # sanity check (in case I missed something)
         if typeof(func_sym) != Symbol
-            error("Expected a symbol but get " + func_sym)
+            error("Expected a symbol but get ", func_sym)
         end
         rfunc = get(env, "$func_sym")
         # next are arguments
@@ -556,11 +599,9 @@ macro R(expression)
     end
 end
 
-function Rrequire(name::ASCIIString)
-    be = Rif.getBaseEnv()
-    ge = Rif.getGlocalEnv()
-    rfunc = be.get("require")
-    call(rfunc, {name}, [""], ge)
+function requireR(name::ASCIIString)
+    e = parser("require(" * name * ")")
+    evalr(e)
 end
 
 end
