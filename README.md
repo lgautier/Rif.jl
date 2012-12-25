@@ -57,8 +57,7 @@ Rif.initr()
 Vectors and arrays
 ------------------
 
-Vectors
-^^^^^^^
+### Vectors
 
 In R there are no scalars, only vectors.
 
@@ -79,8 +78,7 @@ v_r = Rif.RArray{ASCIIString,1}(v)
 elt = v_r[1]
 ```
 
-Matrices and Arrays
-^^^^^^^^^^^^^^^^^^^
+### Matrices and Arrays
 
 Matrices are arrays of dimension 2:
 ```
