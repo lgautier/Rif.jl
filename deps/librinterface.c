@@ -337,20 +337,20 @@ Sexp_evalPromise(const SEXP sexp) {
 #define STRINGIFY(x) #x
 
 /* Return 0 on failure (should be NaN) */
-#define RINTERF_GETITEM(rpointer, sexptype)		\
-  if (TYPEOF(sexp) != sexptype) {			\
-  printf("Not an R vector of type %s.\n", STRINGIFY(sexptype)); \
-    /*FIXME: return int or NULL ?*/			\
-    return 0;						\
-  }							\
-  if ((i < 0) || (i >= LENGTH(sexp))) {			\
-    printf("Out-of-bound.\n");				\
-    /*FIXME: return int or NULL ?*/			\
-    return 0;						\
-  }							\
-  int res = rpointer(sexp)[i];				\
-			  return res;			\
-
+#define RINTERF_GETITEM(rpointer, sexptype, ctype)			\
+  if (TYPEOF(sexp) != sexptype) {					\
+    printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
+    /*FIXME: return int or NULL ?*/					\
+    return 0;								\
+  }									\
+  if ((i < 0) || (i >= LENGTH(sexp))) {					\
+    printf("Out-of-bound.\n");						\
+    /*FIXME: return int or NULL ?*/					\
+    return 0;								\
+  }									\
+  ctype res = rpointer(sexp)[i];					\
+			    return res;					\
+			    
 #define RINTERF_IFROMIJ(sexp, i, j)		\
   int nr = Rf_nrows(sexp);			\
   i  = j * nr + i;				\
@@ -408,46 +408,46 @@ int SexpStrVectorMatrix_setitem(const SEXP sexp, int i, int j, char *item) {
 }
 
 double SexpDoubleVector_getitem(const SEXP sexp, int i) {
-  RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
+  RINTERF_GETITEM(NUMERIC_POINTER, REALSXP, double)
 }
 
 double SexpDoubleVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   RINTERF_IFROMIJ(sexp, i, j)
-  RINTERF_GETITEM(NUMERIC_POINTER, REALSXP)
-}
+    RINTERF_GETITEM(NUMERIC_POINTER, REALSXP, double)
+    }
 
 
 int SexpIntVector_getitem(const SEXP sexp, int i) {
-  RINTERF_GETITEM(INTEGER_POINTER, INTSXP)
-}
+  RINTERF_GETITEM(INTEGER_POINTER, INTSXP, int)
+    }
 int SexpIntVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   RINTERF_IFROMIJ(sexp, i, j)
-  RINTERF_GETITEM(INTEGER_POINTER, INTSXP)
-}
+    RINTERF_GETITEM(INTEGER_POINTER, INTSXP, int)
+    }
 
 int SexpBoolVector_getitem(const SEXP sexp, int i) {
-  RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP)
-}
+  RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP, int)
+    }
 
 int SexpBoolVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   RINTERF_IFROMIJ(sexp, i, j)
-  RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP)
-}
+    RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP, int)
+    }
 
-#define RINTERF_SETNUMITEM(rpointer, sexptype)		\
-  if (TYPEOF(sexp) != sexptype) {			\
+#define RINTERF_SETNUMITEM(rpointer, sexptype)				\
+  if (TYPEOF(sexp) != sexptype) {					\
     printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
-    /*FIXME: return int or NULL ?*/			\
-    return -1;						\
-  }							\
-  if (i >= LENGTH(sexp)) {				\
-    printf("Out-of-bound.\n");				\
-    /*FIXME: return int or NULL ?*/			\
-    return -1;						\
-  }							\
-  rpointer(sexp)[i] = value;				\
-  return 0;						\
-
+    /*FIXME: return int or NULL ?*/					\
+    return -1;								\
+  }									\
+  if (i >= LENGTH(sexp)) {						\
+    printf("Out-of-bound.\n");						\
+    /*FIXME: return int or NULL ?*/					\
+    return -1;								\
+  }									\
+  rpointer(sexp)[i] = value;						\
+  return 0;								\
+  
 
 int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
@@ -499,6 +499,7 @@ int SexpBoolVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
   UNPROTECT(1);								\
   RStatus ^= RINTERF_IDLE;						\
   return sexp;								\
+
 
 SEXP
 SexpDoubleVector_new(double *v, int n) {
@@ -858,3 +859,4 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   UNPROTECT(protect_count);
   return res_ok;
 }
+
