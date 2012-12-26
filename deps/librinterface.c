@@ -336,7 +336,7 @@ Sexp_evalPromise(const SEXP sexp) {
 
 #define STRINGIFY(x) #x
 
-/* Return 0 on failure (should be NaN) */
+/* Return 0 on failure (not quite reliable) */
 #define RINTERF_GETITEM(rpointer, sexptype, ctype)			\
   if (TYPEOF(sexp) != sexptype) {					\
     printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
@@ -355,6 +355,7 @@ Sexp_evalPromise(const SEXP sexp) {
   int nr = Rf_nrows(sexp);			\
   i  = j * nr + i;				\
 
+
 /* Return NULL on failure */
 char* SexpStrVector_getitem(const SEXP sexp, int i) {
   if (TYPEOF(sexp) != STRSXP) {
@@ -367,7 +368,8 @@ char* SexpStrVector_getitem(const SEXP sexp, int i) {
     return NULL;
   }
   char *res;
-  SEXP sexp_item = STRING_ELT(sexp, (R_len_t)i);
+  SEXP sexp_item;
+  PROTECT(sexp_item = STRING_ELT(sexp, (R_len_t)i));
   cetype_t encoding = Rf_getCharCE(sexp_item);
   switch (encoding) {
   case CE_UTF8:
@@ -377,6 +379,7 @@ char* SexpStrVector_getitem(const SEXP sexp, int i) {
     res = CHAR(sexp_item);
     break;
   }
+  UNPROTECT(1);
   return res;
 } 
 
