@@ -11,13 +11,16 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
-       parser,
+       parseR, evalR,
        Rinenv,
-       Rrequire,
+       # utilities (wrapping R functions)
+       requireR, cR,
        # macros
        @R,
        @R_str,
-       @_RL_TYPEOFR
+       @_RL_TYPEOFR,
+       # hack
+       Rp
 
 
 _do_rebuild = false
@@ -98,6 +101,12 @@ function initr()
     return res
 end
 
+macro _RL_INITIALIZED()
+    ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
+          ())    
+end
+
+
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -136,6 +145,7 @@ macro _RL_TYPEOFR(c_ptr)
               (Ptr{Void},), $c_ptr)
     end
 end
+
 
 #FIXME: is there any user for this in the end ?
 RVectorTypes = Union(Bool, Int32, Float64, ASCIIString)
@@ -187,7 +197,7 @@ function convert{T <: Sexp}(::Type{Ptr{Void}}, x::T)
     x.sexp
 end
 
-               
+
 macro librinterface_vector_new(v, classname, celltype)
     local f = "$(classname)_new"
     quote
@@ -484,8 +494,8 @@ end
 
 type REnvironment <: Sexp
     sexp::Ptr{Void}
-    function REnvironment()
-    end
+    #function REnvironment()
+    #end
 
     function REnvironment(x::Ptr{Void})
         new(x)
@@ -548,6 +558,10 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
     c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
                   (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Uint8}, Ptr{Void}),
                   f.sexp, argv_p, length(argv), argn_p, env.sexp)
+    if c_ptr == C_NULL
+        println("*** Call to R function returned NULL.")
+        return None
+    end
     return _factory(c_ptr)
 end
 
@@ -558,8 +572,14 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
     call(f, argv, argn, ge)
 end
 
-function call{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
-                                    argkv::Dict{ASCIIString, S})
+##function call{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
+##                                    argkv::Dict{ASCIIString, S})
+# Precise signature currently problematic because of too loose
+# inference for composite parametric types.
+# ["A" => RArray, "B" => REnvironment] will be of type Dict{ASCIIString,Any}
+# :/
+function call(f::RFunction, argv::Vector,
+              argkv::Dict{ASCIIString})
     ge::REnvironment = getGlobalEnv()
     n_v = length(argv)
     n_kv = length(argkv)
@@ -572,9 +592,9 @@ function call{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
         c_argn[i] = ""
         i += 1
     end
-    for elt in pairs(argkv)
-        c_argn[i] = elt[1]
-        c_argv[i] = elt[2]
+    for (k, v) in argkv
+        c_argn[i] = k
+        c_argv[i] = v
         i += 1
     end
     call(f, c_argv, c_argn, ge)
@@ -614,6 +634,19 @@ type RExpression <: Sexp
     end    
 end
 
+type RS4 <: Sexp
+    sexp::Ptr{Void}
+
+    function RS4(x::Ptr{Void})
+        new(x)
+    end
+
+    function RS4(x::Sexp)
+        new(x)
+    end    
+end
+
+
 ## # FIXME: a conversion would be possible ?
 const _rl_dispatch = {
     CLOSXP => RFunction,
@@ -624,7 +657,8 @@ const _rl_dispatch = {
     INTSXP => RArray,
     REALSXP => RArray,
     STRSXP => RArray,
-    VECSXP => RArray
+    VECSXP => RArray,
+    S4SXP => RS4
     }
 
 function _factory(c_ptr::Ptr{Void})
@@ -642,6 +676,39 @@ function _factory(c_ptr::Ptr{Void})
     end
     return res
 end
+
+## FIXME: not working
+## conversions 
+# scalars
+for t = (Bool, Int32, Float64, ASCIIString)
+    @eval begin
+        function convert(::RArray{$t, 1}, x::$t)
+                RArray{$t, 1}([x])
+        end
+    end
+end
+# vectors and matrices
+for t = (Bool, Int32, Float64, ASCIIString)
+    @eval begin
+        function convert(::RArray{$t, 1}, x::Array{$t, 1})
+            RArray{$t, 1}(x)
+        end
+        function convert(::RArray{$t, 2}, x::Array{$t, 2})
+            RArray{$t, 2}(x)
+        end
+    end
+end
+###
+## FIXME: hack to overcome loose type inference
+function Rp(d::Dict{ASCIIString})
+    res = Dict{ASCIIString, Sexp}()
+    for (k, v) in d
+        res[k] = v
+    end
+    res
+end
+
+
 
 #FIXME: implement get for UTF8 symbols
 function get(environment::REnvironment, symbol::ASCIIString)
@@ -663,15 +730,21 @@ type NamedValue
 end
 
 
-function parser(x::ASCIIString)
+function parseR(x::ASCIIString)
     c_ptr = ccall(dlsym(libri, :EmbeddedR_parse),
                   Ptr{Void},
                   (Ptr{Uint8},),
                   x)
+    if c_ptr == C_NULL
+        if ! bool(@_RL_INITIALIZED)
+            error("R is not initialized")
+        end
+        error("Error evaluating the R expression.")
+    end
     return _factory(c_ptr)
 end
 
-function evalr(x::RExpression)
+function evalR(x::RExpression)
     ge = getGlobalEnv()
     c_ptr = ccall(dlsym(libri, :EmbeddedR_eval),
                   Ptr{Void},
@@ -691,8 +764,8 @@ end
 
 macro R_str(name)
     quote
-        local e = parser($name)
-        evalr(e)
+        local e = parseR($name)
+        evalR(e)
     end
 end
 
@@ -747,9 +820,19 @@ macro R(expression)
     end
 end
 
+function cR(obj...)
+  a = [obj...]
+  t = eltype(a)
+  if t == Int64
+      a = Int32[a...]
+      t = Int32
+  end
+  RArray{t,1}(a)
+end
+
 function requireR(name::ASCIIString)
-    e = parser("require(" * name * ")")
-    evalr(e)
+    e = parseR("require(" * name * ")")
+    evalR(e)
 end
 
 end
