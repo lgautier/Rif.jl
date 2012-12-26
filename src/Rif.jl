@@ -234,29 +234,33 @@ type RArray{T, N} <: Sexp
         new(c_ptr)
     end
     
-    function RArray{T<:Bool}(v::Array{T,1})
+    function RArray(v::Array{Bool,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
-    function RArray{T<:Bool}(v::Array{T,2}, nx::Integer, ny::Integer)
+    function RArray(v::Array{Bool,2})
+        nx, ny = ndims(v)
         @librinterface_matrix_new v SexpBoolVectorMatrix Bool nx ny
     end
-    function RArray{T<:Int32}(v::Array{T,1})
+    function RArray(v::Array{Int32,1})
         @librinterface_vector_new v SexpIntVector Int32
     end
-    function RArray{T<:Int32}(v::Array{T,2}, nx::Integer, ny::Integer)
+    function RArray(v::Array{Int32,2})
+        nx, ny = ndims(v)
         @librinterface_matrix_new v SexpIntVectorMatrix Int32 nx ny
     end
-    function RArray{T<:Float64}(v::Array{T,1})
+    function RArray(v::Array{Float64,1})
         @librinterface_vector_new v SexpDoubleVector Float64
     end
-    function RArray{T<:Float64}(v::Array{T,2}, nx::Integer, ny::Integer)
+    function RArray(v::Array{Float64,2})
+        nx, ny = ndims(v)
         @librinterface_matrix_new v SexpDoubleVectorMatrix Float64 nx ny
     end
-    function RArray{T <: ASCIIString}(v::Array{T,1})
+    function RArray(v::Array{ASCIIString,1})
         v_p = map((x)->pointer(x.data), v)
         @librinterface_vector_new v_p SexpStrVector Ptr{Uint8}
     end
-    function RArray{T <: ASCIIString}(v::Array{T,2})
+    function RArray(v::Array{ASCIIString,2})
+        nx, ny = ndims(v)
         v_p = map((x)->pointer(x.data), v)
         @librinterface_matrix_new v_p SexpStrVectorMatrix Ptr{Uint8} nx ny
     end
