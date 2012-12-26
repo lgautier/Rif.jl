@@ -81,8 +81,8 @@ r_iris = get(ge, "iris")
 colnames = names(r_iris)
 
 # PCA
-m = R"matrix(rnorm(100), nrow=20)"
-pca = call(R"princomp", [m])
-call(R"biplot", [pca])
+m = R("matrix(rnorm(100), nrow=20)")
+pca = call(R("princomp"), [m])
+call(R("biplot"), [pca])
 
 

@@ -13,11 +13,11 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        getGlobalEnv, getBaseEnv,
        parseR, evalR,
        Rinenv,
+       R,
        # utilities (wrapping R functions)
        requireR, cR,
        # macros
        @R,
-       @R_str,
        @_RL_TYPEOFR,
        # hack
        Rp
@@ -312,6 +312,20 @@ macro librinterface_getitem(returntype, classname, x, i)
     end
 end
 
+macro librinterface_getbyname(returntype, classname, x, name)
+    local f = "$(classname)_getbyname"
+    quote
+       local res = ccall(dlsym(libri, $f), $returntype,
+                         (Ptr{Void}, Ptr{Uint8}),
+                         $x.sexp, $name)
+       if res == C_NULL
+           error("Error while getting element `", $name, "`.")
+       end
+       res
+    end
+end
+
+
 macro librinterface_setitem(valuetype, classname, x, i, value)
     local f = "$(classname)_setitem"
     quote
@@ -341,6 +355,10 @@ for t = ((Bool, :SexpBoolVector),
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
             return res
         end
+        function ref(x::RArray{$t[1], 1}, name::ASCIIString)
+            res = @librinterface_getitem $(t[1]) $(t[2]) x i
+            return res
+        end        
         # assign with Int64
         function assign(x::RArray{$t[1], 1}, val::$t[1], i::Int64)
             i = int32(i)
@@ -766,11 +784,9 @@ end
 # FIXME: if not symbol, means a local Julia variable ?
 
 
-macro R_str(name)
-    quote
-        local e = parseR($name)
-        evalR(e)
-    end
+function R(string::ASCIIString)
+    e = parseR(string)
+    evalR(e)
 end
 
 function Rinenv(expr::Expr, env::REnvironment)

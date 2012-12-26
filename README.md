@@ -147,10 +147,10 @@ R code in strings
 using Rif
 
 # load the R package "cluster"
-R"require(cluster)"
+R("require(cluster)")
 
 # today's date by calling R's date()
-call(R"date")[1]
+call(R("date"))[1]
 
 ```
 
@@ -171,23 +171,23 @@ using Rif
 ```
 
 ```
-R"set.seed(1)"
+R("set.seed(1)")
 N = 1000
 requireR("GenomicRanges")
 function sampleR(robj, size, replace)
-call(R"sample", [robj], Rp(["size" => cR(size), "replace" => cR(replace)]))
+call(R("sample"), [robj], Rp(["size" => cR(size), "replace" => cR(replace)]))
 end
 
-gr = call(R"GRanges", [],
+gr = call(R("GRanges"), [],
           ["seqnames" => sampleR(cR("chr1", "chr2", "chr3"), N, true),
-           "ranges" => call(R"IRanges", [],
-                            Rp(["start" => sampleR(R"1:300", N, true),
-                                "width" => sampleR(R"70:75", N, true)])),
+           "ranges" => call(R("IRanges"), [],
+                            Rp(["start" => sampleR(R("1:300"), N, true),
+                                "width" => sampleR(R("70:75"), N, true)])),
            "strand" => sampleR(cR("+", "-", "*"), N, true),
-           "value" => call(R"rnorm", [cR(N), cR(10), cR(3)]),
-           "score" => call(R"rnorm", [cR(N), cR(100), cR(30)]),
+           "value" => call(R("rnorm"), [cR(N), cR(10), cR(3)]),
+           "score" => call(R("rnorm"), [cR(N), cR(100), cR(30)]),
            "sample" => sampleR(cR("Normal", "Tumor"), N, true), 
-           "pair" => sampleR(R"letters", N, true)])
+           "pair" => sampleR(R("letters"), N, true)])
 ```
 
 For reference, the original R code:
@@ -214,7 +214,7 @@ gr <- GRanges(seqnames =
 
 ```
 requireR("ggbio")
-gr = call(R"seqlength<-", [gr, RArray{Int32, 1}(Int32[400, 500, 700])])
+gr = call(R("seqlength<-"), [gr, RArray{Int32, 1}(Int32[400, 500, 700])])
 
 
 ```
