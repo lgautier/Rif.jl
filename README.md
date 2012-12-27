@@ -46,6 +46,11 @@ before anything useful can be done.
 ```
 require("Rif")
 
+Rif.initr()
+```
+
+If needed, the initialization parameters can be specified:
+```
 # set initialization parameters for the embedded R
 argv = ["Julia-R", "--slave"]
 # set the parameters
@@ -162,11 +167,8 @@ Not-so-simple example, using some of the documentation for `autoplot()` in the B
 
 ```
 require("Rif")
-argv = ["Julia-R", "--slave"]
-Rif.setinitargs(argv)
-# initialize embedded R
-Rif.initr()
 using Rif
+initr()
 
 ```
 
@@ -210,14 +212,13 @@ gr <- GRanges(seqnames =
               replace = TRUE))
 ```
 
-...hmmm... after the above there appear to be high chances of segfault....
 
 ```
 requireR("ggbio")
 gr = call(R("seqlength<-"), [gr, RArray{Int32, 1}(Int32[400, 500, 700])])
 
-
 ```
+...hmmm... crash with stack smashing detected at this point....
 
 R code:
 ```
