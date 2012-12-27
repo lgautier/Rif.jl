@@ -53,17 +53,17 @@ libri = dlopen(julia_pkgdir() * "/Rif/deps/librinterface")
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
-    return res
+    return bool(res)
 end
 
 function hasinitargs()
     res = ccall(dlsym(libri, :EmbeddedR_hasArgsSet), Int32, ())
-    return res
+    return bool(res)
 end
 
 function isbusy()
     res = ccall(dlsym(libri, :EmbeddedR_isBusy), Int32, ())
-    return res
+    return bool(res)
 end
 
 function setinitargs(argv::Array{ASCIIString})
@@ -86,7 +86,12 @@ function getinitargs()
     end
 end
 
+_default_argv = ["Julia-R", "--slave"]
+
 function initr()
+    if ! hasinitargs()
+        Rif.setinitargs(_default_argv)
+    end
     rhome = rstrip(readall(`R RHOME`))
     print("Using R_HOME=", rhome, "\n")
     EnvHash()["R_HOME"] = rhome
