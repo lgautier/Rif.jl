@@ -1,9 +1,6 @@
-load("Rif")
+require("Rif")
 
-# set starting parameters for the embedded R
-argv = ["Julia-R", "--slave"]# "--quiet"]
-Rif.setinitargs(argv)
-# initialize embedded R
+# initialize embedded R (with default initialization parameters)
 Rif.initr()
 
 using Rif
@@ -77,12 +74,15 @@ res_mean = call(r_mean, [v_r,], ["x",], ge)
 
 # get a loaded dataset
 r_iris = get(ge, "iris")
+# ... or shorter
+r_iris = R("iris")
 # get names
 colnames = names(r_iris)
+# get the column called `Sepal.Length`
+r_iris["Sepal.Length"]
+
 
 # PCA
 m = R("matrix(rnorm(100), nrow=20)")
 pca = call(R("princomp"), [m])
 call(R("biplot"), [pca])
-
-
