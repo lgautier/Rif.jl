@@ -17,7 +17,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        # utilities (wrapping R functions)
        requireR, cR,
        # macros
-       @R,
+       @R, @RINIT, @R_str,
        @_RL_TYPEOFR,
        # hack
        Rp
@@ -787,6 +787,18 @@ end
 function R(string::ASCIIString)
     e = parseR(string)
     evalR(e)
+end
+
+macro RINIT(argv::Vector{ASCIIString})
+    setinitargs(argv)
+    # initialize embedded R
+    initr()
+end
+    
+macro R_str(code::ASCIIString)
+    ## R must be initialized (macro RINIT), or the call to parseR will fail
+    e = parseR(code)
+    expr(quote, e)
 end
 
 function Rinenv(expr::Expr, env::REnvironment)
