@@ -107,6 +107,9 @@ macro _RL_INITIALIZED()
 end
 
 
+abstract Sexp
+#    sexp::Ptr{Void}
+
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -128,7 +131,7 @@ const _rl_map_rtoj = {
     INTSXP => Int32,
     REALSXP => Float64,
     STRSXP => ASCIIString,
-    VECSXP => Any
+    VECSXP => Sexp
                       }
                       
 const _rl_map_jtor = {
@@ -136,7 +139,7 @@ const _rl_map_jtor = {
     Int32 => INTSXP,
     Float64 => REALSXP,
     ASCIIString => STRSXP,
-    Any => VECSXP
+    Sexp => VECSXP
                       }
 
 macro _RL_TYPEOFR(c_ptr)
@@ -149,9 +152,6 @@ end
 
 #FIXME: is there any user for this in the end ?
 RVectorTypes = Union(Bool, Int32, Float64, ASCIIString)
-
-abstract Sexp
-#    sexp::Ptr{Void}
 
 function librinterface_finalizer(sexp::Sexp)
     ccall(dlsym(libri, :R_ReleaseObject), Void,
@@ -383,11 +383,11 @@ macro RINIT(argv::Vector{ASCIIString})
     initr()
 end
     
-macro R_str(code::ASCIIString)
-    ## R must be initialized (macro RINIT), or the call to parseR will fail
-    e = parseR(code)
-    expr(quote, e)
-end
+#macro R_str(code::ASCIIString)
+#    ## R must be initialized (macro RINIT), or the call to parseR will fail
+#    e = parseR(code)
+#    expr(quote, e)
+#end
 
 function Rinenv(expr::Expr, env::REnvironment)
     if expr.head == :call

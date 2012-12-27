@@ -141,6 +141,19 @@ macro librinterface_setitem(valuetype, classname, x, i, value)
     end
 end
 
+macro librinterface_setbyname(valuetype, classname, x, name, value)
+    local f = "$(classname)_setbyname"
+    quote
+       local res = ccall(dlsym(libri, $f), Int32,
+                         (Ptr{Void}, Int32, $valuetype),
+                         $x.sexp, $name, $value)
+       if res == -1
+           error("Error while setting element `", $name, "`.")
+       end
+       res
+    end
+end
+
 # Vectors
 for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
@@ -152,24 +165,38 @@ for t = ((Bool, :SexpBoolVector),
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
             return res
         end
+        function ref(x::RArray{$t[1], 1}, name::ASCIIString)
+            i = int32(i)
+            res = @librinterface_getbyname $(t[1]) $(t[2]) x name
+            return res
+        end
         # ref with Int32
         function ref(x::RArray{$t[1], 1}, i::Int32)
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
             return res
         end
         function ref(x::RArray{$t[1], 1}, name::ASCIIString)
-            res = @librinterface_getitem $(t[1]) $(t[2]) x i
+            res = @librinterface_getbyname $(t[1]) $(t[2]) x name
             return res
-        end        
+        end
         # assign with Int64
         function assign(x::RArray{$t[1], 1}, val::$t[1], i::Int64)
             i = int32(i)
             res = @librinterface_setitem $(t[1]) $(t[2]) x i val
             return res
         end
+        function assign(x::RArray{$t[1], 1}, val::$t[1], name::ASCIIString)
+            i = int32(i)
+            res = @librinterface_setbyname $(t[1]) $(t[2]) x i name
+            return res
+        end
         # assign with Int32
         function assign(x::RArray{$t[1], 1}, val::$t[1], i::Int32)
             res = @librinterface_setitem $(t[1]) $(t[2]) x i val
+            return res
+        end
+        function assign(x::RArray{$t[1], 1}, val::$t[1], name::ASCIIString)
+            res = @librinterface_setbyname $(t[1]) $(t[2]) x name val
             return res
         end
     end
@@ -261,13 +288,28 @@ function assign(x::RArray{ASCIIString}, val::ASCIIString, i::Int32)
 end
 
 # list
-function ref(x::RArray{Sexp}, i::Int64)
+function ref(x::RArray{Sexp, 1}, i::Int64)
     i = int32(i)
-    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i-1
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
     _factory(c_ptr)
 end
-function ref(x::RArray{Sexp}, i::Int32)
-    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i-1
+
+function ref(x::RArray{Sexp, 1}, i::Int32)
+    c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
     _factory(c_ptr)
+end
+function ref(x::RArray{Sexp, 1}, name::ASCIIString)
+    c_ptr = @librinterface_getbyname Ptr{Void} SexpVecVector x name
+    _factory(c_ptr)
+end
+
+
+function assign{T <: Sexp}(x::RArray{Sexp}, val::T, i::Int32)
+    res = @librinterface_setbyname Ptr{Void} SexpVecVector x i val
+    return res
+end
+function assign{T <: Sexp}(x::RArray{Sexp}, val::T, name::ASCIIString)
+    res = @librinterface_setbyname Ptr{Void} SexpVecVector x name val
+    return res
 end
 

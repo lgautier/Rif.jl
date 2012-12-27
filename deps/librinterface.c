@@ -356,6 +356,59 @@ Sexp_evalPromise(const SEXP sexp) {
   i  = j * nr + i;				\
 
 
+
+/* return the index for the first named element matching `name` */
+/* Return NA if not found*/
+R_len_t 
+nameIndex(const SEXP sexp, const char *name) {
+  SEXP sexp_item, sexp_names;
+  char *name_item;
+  PROTECT(sexp_names = getAttrib(sexp, R_NamesSymbol));
+  R_len_t n = LENGTH(sexp);
+  R_len_t i;
+  cetype_t encoding;
+  int found = 0;
+  for (i = 0; i < n; i++) {
+    sexp_item = STRING_ELT(sexp_names, i);
+    encoding = Rf_getCharCE(sexp_item);
+    switch (encoding) {
+    case CE_UTF8:
+      name_item = translateCharUTF8(sexp_item);
+      break;
+    default:
+      name_item = CHAR(sexp_item);
+      break;
+    }
+    if (strcmp(name, name_item)) {
+      found = 1;
+      break;
+    }
+  }
+  if (found) {
+    return i;
+  } else {
+    return R_NaInt;
+  }
+}
+
+/* Return 0 on failure (should be NaN) */
+#define RINTERF_GETBYNAME(rpointer, sexptype, ctype, name)		\
+  if (TYPEOF(sexp) != sexptype) {					\
+    printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
+    /*FIXME: return int or NULL ?*/					\
+    return 0;								\
+  }									\
+  R_len_t i = nameIndex(sexp, name);					\
+  ctype res;								\
+  if (i != R_NaInt) {							\
+    res = rpointer(sexp)[i];						\
+  } else {								\
+    printf("*** Name `%s` not found.\n", name);				\
+  }									\
+  return res;								\
+			    
+
+
 /* Return NULL on failure */
 char* SexpStrVector_getitem(const SEXP sexp, int i) {
   if (TYPEOF(sexp) != STRSXP) {
@@ -413,6 +466,9 @@ int SexpStrVectorMatrix_setitem(const SEXP sexp, int i, int j, char *item) {
 double SexpDoubleVector_getitem(const SEXP sexp, int i) {
   RINTERF_GETITEM(NUMERIC_POINTER, REALSXP, double)
 }
+double SexpDoubleVector_getbyname(const SEXP sexp, char *name) {
+  RINTERF_GETBYNAME(NUMERIC_POINTER, REALSXP, double, name)
+}
 
 double SexpDoubleVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   RINTERF_IFROMIJ(sexp, i, j)
@@ -423,6 +479,9 @@ double SexpDoubleVectorMatrix_getitem(const SEXP sexp, int i, int j) {
 int SexpIntVector_getitem(const SEXP sexp, int i) {
   RINTERF_GETITEM(INTEGER_POINTER, INTSXP, int)
     }
+int SexpIntVector_getbyname(const SEXP sexp, char *name) {
+  RINTERF_GETBYNAME(INTEGER_POINTER, INTSXP, int, name)
+    }
 int SexpIntVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   RINTERF_IFROMIJ(sexp, i, j)
     RINTERF_GETITEM(INTEGER_POINTER, INTSXP, int)
@@ -430,6 +489,9 @@ int SexpIntVectorMatrix_getitem(const SEXP sexp, int i, int j) {
 
 int SexpBoolVector_getitem(const SEXP sexp, int i) {
   RINTERF_GETITEM(LOGICAL_POINTER, LGLSXP, int)
+    }
+int SexpBoolVector_getbyname(const SEXP sexp, char *name) {
+  RINTERF_GETBYNAME(LOGICAL_POINTER, LGLSXP, int, name)
     }
 
 int SexpBoolVectorMatrix_getitem(const SEXP sexp, int i, int j) {
@@ -450,10 +512,27 @@ int SexpBoolVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   }									\
   rpointer(sexp)[i] = value;						\
   return 0;								\
+
+#define RINTERF_SETBYNAME(rpointer, sexptype, name)			\
+  if (TYPEOF(sexp) != sexptype) {					\
+    printf("Not an R vector of type %s.\n", STRINGIFY(sexptype));	\
+    /*FIXME: return int or NULL ?*/					\
+    return -1;								\
+  }									\
+  R_len_t i = nameIndex(sexp, name);					\
+  if (i != R_NaInt) {							\
+    rpointer(sexp)[i] = value;						\
+    return 0;								\
+  } else {								\
+    return -1;								\
+  }									\
   
 
 int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
+}
+int SexpDoubleVector_setbyname(const SEXP sexp, char *name, double value) {
+  RINTERF_SETBYNAME(NUMERIC_POINTER, REALSXP, name)
 }
 
 int SexpDoubleVectorMatrix_setitem(const SEXP sexp, int i, int j, 
@@ -466,6 +545,9 @@ int SexpDoubleVectorMatrix_setitem(const SEXP sexp, int i, int j,
 int SexpIntVector_setitem(const SEXP sexp, int i, int value) {
   RINTERF_SETNUMITEM(INTEGER_POINTER, INTSXP)
 }
+int SexpIntVector_setbyname(const SEXP sexp, char *name, int value) {
+  RINTERF_SETBYNAME(INTEGER_POINTER, INTSXP, name)
+}
 int SexpIntVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
   RINTERF_IFROMIJ(sexp, i, j)
   RINTERF_SETNUMITEM(INTEGER_POINTER, INTSXP)
@@ -473,6 +555,9 @@ int SexpIntVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
 
 int SexpBoolVector_setitem(const SEXP sexp, int i, int value) {
   RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
+}
+int SexpBoolVector_setbyname(const SEXP sexp, char *name, int value) {
+  RINTERF_SETBYNAME(LOGICAL_POINTER, LGLSXP, name)
 }
 int SexpBoolVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
   RINTERF_IFROMIJ(sexp, i, j)
@@ -600,55 +685,75 @@ SexpBoolVectorMatrix_new(int *v, int nx, int ny) {
 
 /* Return NULL on failure */
 SEXP 
-SexpVecVector_getitem(const SEXP sexp, int i) {
+SexpVecVector_getitem(const SEXP sexp, const int i) {
   if (TYPEOF(sexp) != VECSXP) {
     printf("Not an R vector of type VECSXP.\n");
     return NULL;
   }
-  if (i >= LENGTH(sexp)) {
+  if ((i < 0) || (i >= LENGTH(sexp))) {
     printf("Out-of-bound.\n");
     /*FIXME: return int or NULL ?*/
     return NULL;
   }
-  SEXP sexp_item = VECTOR_ELT(sexp, (R_len_t)i);
+  SEXP sexp_item;
+  PROTECT(sexp_item = VECTOR_ELT(sexp, (R_len_t)i));
   R_PreserveObject(sexp_item);
+  UNPROTECT(1);
   return sexp_item;
 } 
 
+/* Return 0 on success, -1 on failure */
+int
+SexpVecVector_setitem(SEXP sexp, const int i, SEXP value) {
+  if (TYPEOF(sexp) != VECSXP) {
+    printf("Not an R vector of type VECSXP.\n");
+    return -1;
+  }
+  if (i >= LENGTH(sexp)) {
+    printf("Out-of-bound.\n");
+    /*FIXME: return int or NULL ?*/
+    return -1;
+  }
+  SET_VECTOR_ELT(sexp, (R_len_t)i, value);
+  return 0;
+} 
+
+
+/* Return NULL on failure */
+SEXP 
+SexpVecVector_getbyname(const SEXP sexp, char *name) {
+  if (TYPEOF(sexp) != VECSXP) {
+    printf("Not an R vector of type VECSXP.\n");
+    return NULL;
+  }
+  R_len_t i = nameIndex(sexp, name);
+  SEXP sexp_item;
+  if (i != R_NaInt) {
+    sexp_item = VECTOR_ELT(sexp, i);
+    R_PreserveObject(sexp_item);
+  } else {
+    sexp_item = NULL;
+  }
+  return sexp_item;
+} 
+
+/* Return 0 on success, -1 on failure */
+int
+SexpVecVector_setbyname(SEXP sexp, const char *name, SEXP value) {
+  if (TYPEOF(sexp) != VECSXP) {
+    printf("Not an R vector of type VECSXP.\n");
+    return -1;
+  }
+  R_len_t i = nameIndex(sexp, name);
+  if (i == R_NaInt) {
+    return -1;
+  } else {
+    SET_VECTOR_ELT(sexp, (R_len_t)i, value);
+    return 0;
+  }
+} 
 
 	
-/* /\* Return 0 on failure (should be NaN) *\/ */
-/* int */
-/* SexpIntVector_getitem(const SEXP sexp, int i) { */
-/*   if (TYPEOF(sexp) != INTSXP) { */
-/*     printf("Not an R vector of type INTSXP.\n"); */
-/*     /\*FIXME: return int or NULL ?*\/ */
-/*     return 0; */
-/*   } */
-/*   if (i >= LENGTH(sexp)) { */
-/*     printf("Out-of-bound.\n"); */
-/*     /\*FIXME: return int or NULL ?*\/ */
-/*     return 0; */
-/*   } */
-/*   int res = INTEGER_POINTER(sexp)[i]; */
-/*   return res; */
-/* }  */
-
-/* /\* Return -1 on failure *\/ */
-/* int SexpIntVector_setitem(const SEXP sexp, int i, int value) { */
-/*   if (TYPEOF(sexp) != INTSXP) { */
-/*     printf("Not an R vector of type INTSXP.\n"); */
-/*     /\*FIXME: return int or NULL ?*\/ */
-/*     return -1; */
-/*   } */
-/*   if (i >= LENGTH(sexp)) { */
-/*     printf("Out-of-bound.\n"); */
-/*     /\*FIXME: return int or NULL ?*\/ */
-/*     return -1; */
-/*   } */
-/*   INTEGER_POINTER(sexp)[i] = value; */
-/*   return 0; */
-/* }  */
 
 SEXP Promise_eval(SEXP sexp) {
   SEXP res, env;
