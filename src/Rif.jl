@@ -23,8 +23,17 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        Rp
 
 _do_rebuild = false
-dllname = julia_pkgdir() * "/Rif/deps/librinterface.so"
-csourcename = julia_pkgdir() * "/Rif/deps/librinterface.c"
+
+function _packpath(dir::String, name::String)
+    return joinpath(julia_pkgdir(), "Rif", dir, name)
+end
+
+function _packpath(dir::String)
+    return joinpath(julia_pkgdir(), "Rif", dir)
+end
+
+dllname = _packpath("deps", "librinterface.so")
+csourcename = _packpath("deps", "librinterface.c")
 if isfile(dllname)
     if Base.stat(dllname).mtime < Base.stat(csourcename).mtime
         println("**********************************************************")
@@ -39,7 +48,7 @@ else
     _do_rebuild = true
 end    
 if _do_rebuild
-    cd(julia_pkgdir() * "/Rif/deps") do
+    cd(_packpath("deps")) do
     run(`make all`) 
     end
     println("*********************************************************")
@@ -47,8 +56,8 @@ if _do_rebuild
     println("*********************************************************")
 end
 
-include("Rif/src/embeddedr.jl")
-include("Rif/src/sexp.jl")
+include(_packpath("src","embeddedr.jl"))
+include(_packpath("src", "sexp.jl"))
 
 const _rl_map_rtoj = {
     LGLSXP => Bool,
@@ -65,7 +74,7 @@ const _rl_map_jtor = {
     ASCIIString => STRSXP,
     Sexp => VECSXP
                       }
-include("Rif/src/vectors.jl")
+include(_packpath("src", "vectors.jl"))
 
 macro librinterface_getvalue(returntype, classname, x, i)
     local f = "$(classname)_getvalue"
@@ -111,9 +120,9 @@ end
 ## end
 
 
-include("Rif/src/environments.jl")
+include(_packpath("src", "environments.jl"))
 
-include("Rif/src/functions.jl")
+include(_packpath("src", "functions.jl"))
 
 type RExpression <: Sexp
     sexp::Ptr{Void}
