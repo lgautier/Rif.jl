@@ -163,6 +163,32 @@ call(R("date"))[1]
 Examples
 ========
 
+
+Hierarchical clustering
+-----------------------
+
+We are using random data so the example is somewhat futile
+
+```
+require("Rif")
+using Rif
+initr()
+
+m = R("matrix(rnorm(100), nrow=20)")
+# A Julia matrix mj of type (Array{Float64, 2}) could
+# be used with
+# m = RArray{Float64,2}(mj)
+
+d = call(R("dist"), [m])
+hc = call(R("hclust"), [d])
+call(R("plot"), [hc], 
+       ["sub"=>cR(""), "xlab"=>cR("")])
+```
+![hctree](hctree.png)
+
+ggbio (in Bioconductor)
+-----------------------
+
 Not-so-simple example, using some of the documentation for `autoplot()` in the Bioconductor package `ggbio`.
 
 ```
