@@ -1,5 +1,4 @@
 
-
 macro librinterface_vector_new(v, classname, celltype)
     local f = "$(classname)_new"
     quote

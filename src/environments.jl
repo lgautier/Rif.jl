@@ -1,3 +1,7 @@
+
+#include("Rif/src/embeddedr.jl")
+#include("Rif/src/sexp.jl")
+
 type REnvironment <: Sexp
     sexp::Ptr{Void}
     #function REnvironment()
