@@ -564,6 +564,17 @@ int SexpBoolVectorMatrix_setitem(const SEXP sexp, int i, int j, int value) {
   RINTERF_SETNUMITEM(LOGICAL_POINTER, LGLSXP)
 }
 
+#define RINTERF_NEWVECTOR_NOFILL(rconstructor_call)			\
+  if (! RINTERF_ISREADY()) {						\
+    printf("R is not ready.\n");					\
+    return NULL;							\
+    }									\
+  RStatus ^= RINTERF_IDLE;						\
+  SEXP sexp = rconstructor_call;					\
+  R_PreserveObject(sexp);						\
+  RStatus ^= RINTERF_IDLE;						\
+  return sexp;								\
+
 
 #define RINTERF_NEWVECTOR(rpointer, rconstructor_call, ctype)		\
   if (! RINTERF_ISREADY()) {						\
@@ -595,9 +606,20 @@ SexpDoubleVector_new(double *v, int n) {
 }
 
 SEXP
+SexpDoubleVector_new_nofill(int n) {
+  RINTERF_NEWVECTOR_NOFILL(NEW_NUMERIC(n))
+}
+
+SEXP
 SexpDoubleVectorMatrix_new(double *v, int nx, int ny) {
   int n = nx * ny;
   RINTERF_NEWVECTOR(NUMERIC_POINTER, allocMatrix(REALSXP, nx, ny), double)
+}
+
+SEXP
+SexpDoubleVectorMatrix_new_nofill(int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR_NOFILL(allocMatrix(REALSXP, nx, ny))
 }
 
 SEXP
@@ -625,6 +647,25 @@ SexpStrVector_new(char **v, int n) {
   RStatus ^= RINTERF_IDLE;
   return sexp;
 }
+
+SEXP
+SexpStrVector_new_nofill(int n) {
+  if (! RINTERF_ISREADY()) {
+    printf("R is not ready.\n");
+    return NULL;
+  }
+  RStatus ^= RINTERF_IDLE;
+  SEXP sexp = NEW_CHARACTER(n);
+  if (sexp == NULL) {
+    printf("Problem while creating R vector.\n");
+    RStatus ^= RINTERF_IDLE;
+    return sexp;
+  }
+  R_PreserveObject(sexp);
+  RStatus ^= RINTERF_IDLE;
+  return sexp;
+}
+
 //FIXME: code duplication with SexpStrVector_new
 SEXP
 SexpStrVectorMatrix_new(char **v, int nx, int ny) {
@@ -659,9 +700,20 @@ SexpIntVector_new(double *v, int n) {
 }
 
 SEXP
+SexpIntVector_new_nofill(int n) {
+  RINTERF_NEWVECTOR_NOFILL(NEW_INTEGER(n))
+}
+
+SEXP
 SexpIntVectorMatrix_new(int *v, int nx, int ny) {
   int n = nx * ny;
   RINTERF_NEWVECTOR(INTEGER_POINTER, allocMatrix(INTSXP, nx, ny), int)
+}
+
+SEXP
+SexpIntVectorMatrix_new_nofill(int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR_NOFILL(allocMatrix(INTSXP, nx, ny))
 }
 
 int*
@@ -677,9 +729,20 @@ SexpBoolVector_new(double *v, int n) {
 }
 
 SEXP
+SexpBoolVector_new_nofill(int n) {
+  RINTERF_NEWVECTOR_NOFILL(NEW_LOGICAL(n))
+}
+
+SEXP
 SexpBoolVectorMatrix_new(int *v, int nx, int ny) {
   int n = nx * ny;
   RINTERF_NEWVECTOR(LOGICAL_POINTER, allocMatrix(LGLSXP, nx, ny), int)
+}
+
+SEXP
+SexpBoolVectorMatrix_new_nofill(int nx, int ny) {
+  int n = nx * ny;
+  RINTERF_NEWVECTOR_NOFILL(allocMatrix(LGLSXP, nx, ny))
 }
 
 
@@ -752,8 +815,6 @@ SexpVecVector_setbyname(SEXP sexp, const char *name, SEXP value) {
     return 0;
   }
 } 
-
-	
 
 SEXP Promise_eval(SEXP sexp) {
   SEXP res, env;
