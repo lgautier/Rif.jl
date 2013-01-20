@@ -20,6 +20,7 @@ typedef struct {
   char **argv;
 } InitArgv;
 
+
 /* struct { */
 /*   list of arguments along their names */
 /* } call; */
@@ -321,6 +322,22 @@ Sexp_ndims(const SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
+Sexp_getAttribute(const SEXP sexp,
+		  char *name) {
+  if (! RINTERF_ISREADY()) {
+    return -1;
+  }
+  SEXP res = getAttrib(sexp, Rf_install(name));
+  if (Rf_isNull(res)) {
+    res = NULL;
+  } else {
+    R_PreserveObject(res);
+  }
+  return res;  
+}
+
+/* Return NULL on failure */
+SEXP
 Sexp_evalPromise(const SEXP sexp) {
   if (TYPEOF(sexp) != PROMSXP) {
     printf("Not a promise.\n");
@@ -344,7 +361,7 @@ Sexp_evalPromise(const SEXP sexp) {
     return 0;								\
   }									\
   if ((i < 0) || (i >= LENGTH(sexp))) {					\
-    printf("Out-of-bound.\n");						\
+    printf("Out-of-bound. (looking for element %i while length is %i)\n", i, LENGTH(sexp)); \
     /*FIXME: return int or NULL ?*/					\
     return 0;								\
   }									\
