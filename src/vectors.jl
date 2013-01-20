@@ -24,7 +24,8 @@ macro librinterface_matrix_new(v, classname, celltype, nx, ny)
     end    
 end
 
-type RArray{T, N} <: Sexp
+
+type RArray{T, N} <: AbstractSexp
     sexp::Ptr{Void}
 
     function RArray(c_ptr::Ptr{Void})
@@ -71,7 +72,6 @@ type RArray{T, N} <: Sexp
         v_p = map((x)->pointer(x.sexp), v)
         @librinterface_vector_new v_p SexpVecVector Ptr{Void}
     end
-
 end    
 
 function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
@@ -287,27 +287,27 @@ function assign(x::RArray{ASCIIString}, val::ASCIIString, i::Int32)
 end
 
 # list
-function ref(x::RArray{Sexp, 1}, i::Int64)
+function ref(x::RArray{AbstractSexp, 1}, i::Int64)
     i = int32(i)
     c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
     _factory(c_ptr)
 end
 
-function ref(x::RArray{Sexp, 1}, i::Int32)
+function ref(x::RArray{AbstractSexp, 1}, i::Int32)
     c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
     _factory(c_ptr)
 end
-function ref(x::RArray{Sexp, 1}, name::ASCIIString)
+function ref(x::RArray{AbstractSexp, 1}, name::ASCIIString)
     c_ptr = @librinterface_getbyname Ptr{Void} SexpVecVector x name
     _factory(c_ptr)
 end
 
 
-function assign{T <: Sexp}(x::RArray{Sexp}, val::T, i::Int32)
+function assign{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, i::Int32)
     res = @librinterface_setbyname Ptr{Void} SexpVecVector x i val
     return res
 end
-function assign{T <: Sexp}(x::RArray{Sexp}, val::T, name::ASCIIString)
+function assign{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, name::ASCIIString)
     res = @librinterface_setbyname Ptr{Void} SexpVecVector x name val
     return res
 end

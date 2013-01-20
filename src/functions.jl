@@ -1,5 +1,5 @@
 
-type RFunction <: Sexp
+type RFunction <: AbstractSexp
     sexp::Ptr{Void}
     function RFunction(x::Sexp)
         new(x)

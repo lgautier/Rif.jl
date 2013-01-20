@@ -2,7 +2,7 @@
 #include("Rif/src/embeddedr.jl")
 #include("Rif/src/sexp.jl")
 
-type REnvironment <: Sexp
+type REnvironment <: AbstractSexp
     sexp::Ptr{Void}
     #function REnvironment()
     #end
@@ -21,7 +21,7 @@ function ref(x::REnvironment, i::ASCIIString)
     return _factory(c_ptr)
 end
 
-function assign{T <: Sexp}(x::REnvironment, val::T, i::ASCIIString)
+function assign{T <: AbstractSexp}(x::REnvironment, val::T, i::ASCIIString)
     res = @librinterface_setvalue Ptr{Void} SexpEnvironment x i val
     return res
 end

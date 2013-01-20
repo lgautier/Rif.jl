@@ -4,9 +4,15 @@ using Base
 #import Base.dlopen, Base.dlsym, Base.length
 import Base.assign, Base.ref, Base.convert, Base.length, Base.map
 
+require("DataFrames")
+import DataFrames.AbstractDataArray
+
+
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
        RArray,
+       Sexp, AbstractSexp,
+       RDataArray, AbstractRDataArray,
        ref, assign, map, del,
        call, names, ndims,
        convert,
@@ -32,14 +38,18 @@ function _packpath(dir::String)
     return joinpath(julia_pkgdir(), "Rif", dir)
 end
 
-dllname = _packpath("deps", "librinterface.so")
-csourcename = _packpath("deps", "librinterface.c")
-if isfile(dllname)
-    if Base.stat(dllname).mtime < Base.stat(csourcename).mtime
-        println("**********************************************************")
-        println("librinterface.so is older than librinterface; compiling...")
-        println("**********************************************************")
-        _do_rebuild = true
+dllpath = _packpath("deps", "librinterface.so")
+
+if isfile(dllpath)
+    for csourcename in ("librinterface.c", )
+        csourcepath = _packpath("deps", csourcename)
+        if  Base.stat(dllpath).mtime < Base.stat(csourcepath).mtime
+            println("************************************************************")
+            println("librinterface.so is older than librinterface.c; compiling...")
+            println("************************************************************")
+            _do_rebuild = true
+            break
+        end
     end
 else
     println("*********************************************************")
@@ -75,6 +85,9 @@ const _rl_map_jtor = {
     Sexp => VECSXP
                       }
 include(_packpath("src", "vectors.jl"))
+#FIXME: at some point the content of dataframes.jl will supersede the one
+#       of vectors.jl
+include(_packpath("src", "dataframes.jl"))
 
 macro librinterface_getvalue(returntype, classname, x, i)
     local f = "$(classname)_getvalue"
@@ -124,7 +137,7 @@ include(_packpath("src", "environments.jl"))
 
 include(_packpath("src", "functions.jl"))
 
-type RExpression <: Sexp
+type RExpression <: AbstractSexp
     sexp::Ptr{Void}
     function RExpression(x::Sexp)
         new(x)
@@ -134,7 +147,7 @@ type RExpression <: Sexp
     end    
 end
 
-type RS4 <: Sexp
+type RS4 <: AbstractSexp
     sexp::Ptr{Void}
 
     function RS4(x::Ptr{Void})
