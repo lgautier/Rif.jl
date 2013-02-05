@@ -31,11 +31,11 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
 _do_rebuild = false
 
 function _packpath(dir::String, name::String)
-    return joinpath(julia_pkgdir(), "Rif", dir, name)
+    return joinpath(Pkg.dir(), "Rif", dir, name)
 end
 
 function _packpath(dir::String)
-    return joinpath(julia_pkgdir(), "Rif", dir)
+    return joinpath(Pkg.dir(), "Rif", dir)
 end
 
 dllpath = _packpath("deps", "librinterface.so")

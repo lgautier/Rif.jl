@@ -35,6 +35,7 @@ function del(x::REnvironment, i::ASCIIString)
     end
 end
 
+import Base.get
 #FIXME: implement get for UTF8 symbols
 function get(environment::REnvironment, symbol::ASCIIString)
     c_ptr = ccall(dlsym(libri, :SexpEnvironment_get), Ptr{Void},
