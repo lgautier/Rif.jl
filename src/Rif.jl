@@ -2,7 +2,10 @@ module Rif
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.assign, Base.ref, Base.convert, Base.length, Base.map
+import Base.assign, Base.ref,
+       Base.convert,
+       Base.eltype,
+       Base.length, Base.map
 
 require("DataFrames")
 import DataFrames.AbstractDataArray

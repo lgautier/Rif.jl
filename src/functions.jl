@@ -10,9 +10,9 @@ type RFunction <: AbstractSexp
 
 end
 
-function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
-                                           argn::Vector{U},
-                                           env::REnvironment)
+function call{U <: ASCIIString}(f::RFunction, argv::Vector,
+                                argn::Vector{U},
+                                env::REnvironment)
     argv_p = map((x)->x.sexp, argv)
     argn_p = map((x)->pointer(x.data), argn)
     c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
@@ -26,8 +26,8 @@ function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
 end
 
 
-function call{T <: Sexp, U <: ASCIIString}(f::RFunction, argv::Vector{T},
-                                           argn::Vector{U})
+function call{U <: ASCIIString}(f::RFunction, argv::Vector,
+                                argn::Vector{U})
     ge::REnvironment = getGlobalEnv()
     call(f, argv, argn, ge)
 end
@@ -67,12 +67,18 @@ function call{T <: Sexp, S <: Sexp}(f::RFunction,
     call(f, [], argkv)
 end
 
-function call{T <: Sexp}(f::RFunction, argv::Vector{T})
+# Types are invariant in Julia. This prevents us from
+# typing the vector of arguments to something like <: AbstractSexp
+# and force us to run checks explicitly :/
+function call(f::RFunction, argv::Vector)
     ge = getGlobalEnv()
     n::Integer = length(argv)
     argn = Array(ASCIIString, n)
     i::Integer = 1
     while i <= n
+        if ! (typeof(argv[i]) <: AbstractSexp)
+            error("Argument $(i) should be a subtype of AbstractSexp/")
+        end
         argn[i] = ""
         i += 1
     end

@@ -104,6 +104,10 @@ function convert(::Type{Ptr{Void}}, x::RArray)
     x.sexp
 end
 
+function convert(::Type{Sexp}, x::RArray)
+    Sexp(x.sexp)
+end
+
 
 macro librinterface_getitem(returntype, classname, x, i)
     local f = "$(classname)_getitem"
