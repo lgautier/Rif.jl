@@ -100,6 +100,11 @@ end
 ##     error("Not implemented")
 ## end
 
+function convert(::Type{Ptr{Void}}, x::RArray)
+    x.sexp
+end
+
+
 macro librinterface_getitem(returntype, classname, x, i)
     local f = "$(classname)_getitem"
     quote
