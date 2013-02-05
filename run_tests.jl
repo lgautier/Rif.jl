@@ -12,5 +12,5 @@ Rif.initr()
 
 for a_test in all_tests
     println(" * $(a_test)")
-    include(my_test)
+    include(a_test)
 end
