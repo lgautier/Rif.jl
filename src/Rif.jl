@@ -239,7 +239,7 @@ function parseR(x::ASCIIString)
                   (Ptr{Uint8},),
                   x)
     if c_ptr == C_NULL
-        if ! bool(@_RL_INITIALIZED)
+        if ! bool( _RL_INITIALIZED() )
             error("R is not initialized")
         end
         error("Error evaluating the R expression.")
