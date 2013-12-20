@@ -61,7 +61,7 @@ function initr()
     end
     rhome = rstrip(readall(`R RHOME`))
     print("Using R_HOME=", rhome, "\n")
-    EnvHash()["R_HOME"] = rhome
+    ENV["R_HOME"] = rhome
     res = ccall(dlsym(libri, :EmbeddedR_init), Int32, ())
     if res == -1
         if ! hasinitargs()
