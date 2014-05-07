@@ -8,9 +8,9 @@
 #include <Rembedded.h>
 #include <Rdefines.h>
 #include <R_ext/Parse.h>
-#ifdef HAS_READLINE
-#include <readline/readline.h>
-#endif
+// #ifdef HAS_READLINE
+// #include <readline/readline.h>
+// #endif
 
 #include "r_utils.h"
 
@@ -39,7 +39,7 @@ static SEXP errMessage_SEXP;
 
 #define RINTERF_READY (RINTERF_ARGSSET & RINTERF_INITIALIZED & RINTERF_IDLE)
 
-static int RStatus = RINTERF_IDLE; 
+static int RStatus = RINTERF_IDLE;
 
 #define RINTERF_ISINITIALIZED() (RStatus & RINTERF_INITIALIZED)
 #define RINTERF_ISBUSY() (!(RStatus & RINTERF_IDLE))
@@ -109,11 +109,11 @@ EmbeddedR_setInitArgs (const int argc, const char **argv) {
   }
   int arg_i;
   if ( initargv->argc > 0 ) {
-    /* FIXME: Using free (and calloc below) - may be consider to make 
+    /* FIXME: Using free (and calloc below) - may be consider to make
      this slightly configurable for other bridges ? */
     for (arg_i = 0; arg_i < argc; arg_i++) {
       free(initargv->argv[arg_i]);
-    } 
+    }
     free(initargv->argv);
     initargv->argc = 0;
   }
@@ -122,7 +122,7 @@ EmbeddedR_setInitArgs (const int argc, const char **argv) {
   for (arg_i = 0; arg_i < argc; arg_i++) {
     initargv->argv[arg_i] = (char*)(calloc(strlen(argv[arg_i]), sizeof(char*)));
     strcpy(initargv->argv[arg_i], argv[arg_i]);
-  } 
+  }
   RStatus |= RINTERF_ARGSSET;
   RStatus ^= RINTERF_IDLE;
   return 0;
@@ -163,7 +163,7 @@ EmbeddedR_init(void) {
   }
   RStatus ^= RINTERF_IDLE;
   if (! RINTERF_HASARGSSET()) {
-    /* Initialization arguments must be set and 
+    /* Initialization arguments must be set and
        R can only be initialized once */
     printf("Initialization parameters must be set first.\n");
     RStatus ^= RINTERF_IDLE;
@@ -177,7 +177,7 @@ EmbeddedR_init(void) {
   }
   int status = Rf_initEmbeddedR(initargv->argc, initargv->argv);
   if (status < 0) {
-    printf("R initialization failed.\n"); 
+    printf("R initialization failed.\n");
     RStatus ^= RINTERF_IDLE;
     return -1;
   }
@@ -199,17 +199,17 @@ EmbeddedR_init(void) {
 
   /*FIXME: setting readline variables so R's oddly static declarations
     become harmless*/
-#ifdef HAS_READLINE
-  char *rl_completer, *rl_basic;
-  rl_completer = strndup(rl_completer_word_break_characters, 200);
-  rl_completer_word_break_characters = rl_completer;
-  
-  rl_basic = strndup(rl_basic_word_break_characters, 200);
-  rl_basic_word_break_characters = rl_basic;
-#endif
+// #ifdef HAS_READLINE
+//   char *rl_completer, *rl_basic;
+//   rl_completer = strndup(rl_completer_word_break_characters, 200);
+//   rl_completer_word_break_characters = rl_completer;
 
+//   rl_basic = strndup(rl_basic_word_break_characters, 200);
+//   rl_basic_word_break_characters = rl_basic;
+// #endif
+    printf("R is initializing.\n");
   /* */
-  errMessage_SEXP = findVar(install("geterrmessage"), 
+  errMessage_SEXP = findVar(install("geterrmessage"),
                             R_BaseNamespace);
 
   RStatus |= (RINTERF_INITIALIZED);
@@ -333,7 +333,7 @@ Sexp_getAttribute(const SEXP sexp,
   } else {
     R_PreserveObject(res);
   }
-  return res;  
+  return res;
 }
 
 /* Return NULL on failure */
@@ -367,7 +367,7 @@ Sexp_evalPromise(const SEXP sexp) {
   }									\
   ctype res = rpointer(sexp)[i];					\
 			    return res;					\
-			    
+
 #define RINTERF_IFROMIJ(sexp, i, j)		\
   int nr = Rf_nrows(sexp);			\
   i  = j * nr + i;				\
@@ -376,7 +376,7 @@ Sexp_evalPromise(const SEXP sexp) {
 
 /* return the index for the first named element matching `name` */
 /* Return NA if not found*/
-R_len_t 
+R_len_t
 nameIndex(const SEXP sexp, const char *name) {
   SEXP sexp_item, sexp_names;
   char *name_item;
@@ -423,7 +423,7 @@ nameIndex(const SEXP sexp, const char *name) {
     printf("*** Name `%s` not found.\n", name);				\
   }									\
   return res;								\
-			    
+
 
 
 /* Return NULL on failure */
@@ -451,11 +451,11 @@ char* SexpStrVector_getitem(const SEXP sexp, int i) {
   }
   UNPROTECT(1);
   return res;
-} 
+}
 
 /* Return -1 on failure */
 char* SexpStrVectorMatrix_getitem(const SEXP sexp, int i, int j) {
-  RINTERF_IFROMIJ(sexp, i, j);  
+  RINTERF_IFROMIJ(sexp, i, j);
   return SexpStrVector_getitem(sexp, i);
 }
 
@@ -473,7 +473,7 @@ int SexpStrVector_setitem(const SEXP sexp, int i, char *item) {
   SEXP newstring = mkChar(item);
   SET_STRING_ELT(sexp, (R_len_t)i, newstring);
   return 0;
-} 
+}
 
 int SexpStrVectorMatrix_setitem(const SEXP sexp, int i, int j, char *item) {
   RINTERF_IFROMIJ(sexp, i, j);
@@ -543,7 +543,7 @@ int SexpBoolVectorMatrix_getitem(const SEXP sexp, int i, int j) {
   } else {								\
     return -1;								\
   }									\
-  
+
 
 int SexpDoubleVector_setitem(const SEXP sexp, int i, double value) {
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
@@ -552,7 +552,7 @@ int SexpDoubleVector_setbyname(const SEXP sexp, char *name, double value) {
   RINTERF_SETBYNAME(NUMERIC_POINTER, REALSXP, name)
 }
 
-int SexpDoubleVectorMatrix_setitem(const SEXP sexp, int i, int j, 
+int SexpDoubleVectorMatrix_setitem(const SEXP sexp, int i, int j,
 				   double value) {
   RINTERF_IFROMIJ(sexp, i, j)
   RINTERF_SETNUMITEM(NUMERIC_POINTER, REALSXP)
@@ -735,7 +735,7 @@ SexpIntVectorMatrix_new_nofill(int nx, int ny) {
 
 int*
 SexpIntVector_ptr(SEXP sexp) {
-  return INTEGER_POINTER(sexp); 
+  return INTEGER_POINTER(sexp);
 }
 
 
@@ -764,7 +764,7 @@ SexpBoolVectorMatrix_new_nofill(int nx, int ny) {
 
 
 /* Return NULL on failure */
-SEXP 
+SEXP
 SexpVecVector_getitem(const SEXP sexp, const int i) {
   if (TYPEOF(sexp) != VECSXP) {
     printf("Not an R vector of type VECSXP.\n");
@@ -780,7 +780,7 @@ SexpVecVector_getitem(const SEXP sexp, const int i) {
   R_PreserveObject(sexp_item);
   UNPROTECT(1);
   return sexp_item;
-} 
+}
 
 /* Return 0 on success, -1 on failure */
 int
@@ -796,11 +796,11 @@ SexpVecVector_setitem(SEXP sexp, const int i, SEXP value) {
   }
   SET_VECTOR_ELT(sexp, (R_len_t)i, value);
   return 0;
-} 
+}
 
 
 /* Return NULL on failure */
-SEXP 
+SEXP
 SexpVecVector_getbyname(const SEXP sexp, char *name) {
   if (TYPEOF(sexp) != VECSXP) {
     printf("Not an R vector of type VECSXP.\n");
@@ -815,7 +815,7 @@ SexpVecVector_getbyname(const SEXP sexp, char *name) {
     sexp_item = NULL;
   }
   return sexp_item;
-} 
+}
 
 /* Return 0 on success, -1 on failure */
 int
@@ -831,7 +831,7 @@ SexpVecVector_setbyname(SEXP sexp, const char *name, SEXP value) {
     SET_VECTOR_ELT(sexp, (R_len_t)i, value);
     return 0;
   }
-} 
+}
 
 SEXP Promise_eval(SEXP sexp) {
   SEXP res, env;
@@ -892,11 +892,11 @@ SexpEnvironment_delvalue(const SEXP envir, const char* name) {
   if (envir == R_BaseNamespace) {
     printf("Variables in the R base namespace cannot be changed.\n");
     RStatus ^= RINTERF_IDLE;
-    return -1;    
+    return -1;
   } else if (envir == R_BaseEnv) {
     printf("Variables in the R base environment cannot be changed.\n");
     RStatus ^= RINTERF_IDLE;
-    return -1;    
+    return -1;
   } else if (envir == R_EmptyEnv) {
     printf("Nothing can be changed from the empty environment.\n");
     RStatus ^= RINTERF_IDLE;
@@ -941,7 +941,7 @@ SexpEnvironment_setvalue(const SEXP envir, const char* name, const SEXP value) {
   //FIXME: is the copy really needed / good ?
   SEXP value_copy;
   PROTECT(value_copy = Rf_duplicate(value));
-  Rf_defineVar(symbol, value_copy, envir);  
+  Rf_defineVar(symbol, value_copy, envir);
   //FIXME: protect/unprotect from garbage collection (for now protect only)
   UNPROTECT(1);
   RStatus ^= RINTERF_IDLE;
@@ -962,7 +962,7 @@ EmbeddedR_getGlobalEnv(void) {
   //FIXME: protect/unprotect from garbage collection (for now protect only)
   R_PreserveObject(sexp);
   RStatus ^= RINTERF_IDLE;
-  return sexp;  
+  return sexp;
 }
 
 /* Return NULL on failure */
@@ -977,7 +977,7 @@ EmbeddedR_getBaseEnv(void) {
   //FIXME: protect/unprotect from garbage collection (for now protect only)
   R_PreserveObject(sexp);
   RStatus ^= RINTERF_IDLE;
-  return sexp;  
+  return sexp;
 }
 
 /* */
