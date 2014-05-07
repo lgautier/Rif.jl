@@ -207,7 +207,6 @@ EmbeddedR_init(void) {
 //   rl_basic = strndup(rl_basic_word_break_characters, 200);
 //   rl_basic_word_break_characters = rl_basic;
 // #endif
-    printf("R is initializing.\n");
   /* */
   errMessage_SEXP = findVar(install("geterrmessage"),
                             R_BaseNamespace);
