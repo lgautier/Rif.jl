@@ -16,7 +16,7 @@ const EXPRSXP = uint(20)
 const S4SXP  = uint(25)
 
 
-libri = dlopen(Pkg.dir() * "/Rif/deps/librinterface")
+libri = dlopen(Pkg.dir() * "/Rif/deps/librinterface.so")
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
