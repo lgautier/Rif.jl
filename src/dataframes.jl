@@ -178,12 +178,12 @@ for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
          (Float64, :SexpDoubleVector))
     @eval begin
-        function ref(x::RDataArray{$t[1], 1}, i::Integer)
+        function getindex(x::RDataArray{$t[1], 1}, i::Integer)
             i32 = int32(i)
             res = @librinterface_getitem $(t[1]) $(t[2]) x i32
             return res
         end
-        function assign(x::RDataArray{$t[1], 1}, val::$t[1],
+        function setindex!(x::RDataArray{$t[1], 1}, val::$t[1],
                         i::Integer)
             i = convert(Int32, i)
             res = @librinterface_setitem $(t[1]) $(t[2]) x i val
@@ -197,13 +197,13 @@ for t = ((Bool, :SexpBoolVectorMatrix),
          (Int32, :SexpIntVectorMatrix),
          (Float64, :SexpDoubleVectorMatrix))
     @eval begin
-        function ref(x::RDataArray{$t[1], 2}, i::Integer, j::Integer)
+        function getindex(x::RDataArray{$t[1], 2}, i::Integer, j::Integer)
             i = convert(Int32, i)
             j = convert(Int32, j)
             res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
             return res
         end
-        function assign(x::RDataArray{$t[1], 2}, val::$t[1],
+        function setindex!(x::RDataArray{$t[1], 2}, val::$t[1],
                         i::Integer, j::Integer)
             i = convert(Int32, i)
             j = convert(Int32, j)
@@ -215,19 +215,19 @@ end
 
 
 # array of strings
-function ref(x::RDataArray{ASCIIString, 1}, i::Integer)
+function getindex(x::RDataArray{ASCIIString, 1}, i::Integer)
     i = convert(Int32, i)
     c_ptr = @librinterface_getitem Ptr{Uint8} SexpStrVector x i
     bytestring(c_ptr)
 end
-function ref(x::RDataArray{ASCIIString, 2}, i::Integer, j::Integer)
+function getindex(x::RDataArray{ASCIIString, 2}, i::Integer, j::Integer)
     i = convert(Int32, i)
     j = convert(Int32, j)
     c_ptr = @librinterface_getitem2 Ptr{Uint8} SexpStrVectorMatrix x i j
     bytestring(c_ptr)
 end
 
-function assign(x::RDataArray{ASCIIString}, val::ASCIIString, i::Integer)
+function setindex!(x::RDataArray{ASCIIString}, val::ASCIIString, i::Integer)
     i = convert(Int32, i)
     res = @librinterface_setitem Ptr{Uint8} SexpIntVector x i val
     return res
@@ -238,13 +238,13 @@ RListType = Union(AbstractSexp, AbstractRDataArray)
 #RListType = Union(AbstractRDataArray)
 
 # list
-function ref(x::RDataArray{RListType, 1}, i::Integer)
+function getindex(x::RDataArray{RListType, 1}, i::Integer)
     i = convert(Int32, i)
     c_ptr = @librinterface_getitem Ptr{Void} SexpVecVector x i
     _factory(c_ptr)
 end
 
-function ref(x::RDataArray{RListType, 1}, name::ASCIIString)
+function getindex(x::RDataArray{RListType, 1}, name::ASCIIString)
     c_ptr = @librinterface_getbyname Ptr{Void} SexpVecVector x name
     _factory(c_ptr)
 end

@@ -62,6 +62,14 @@ end
 
 ##function call{T <: Sexp, S <: Sexp}(f::RFunction,
 ##                                    argkv::Dict{ASCIIString, S})
+
+# 
+#Warning: static parameter T does not occur in signature for call at /home/dzea/.julia/v0.3/Rif/src/functions.jl:67.
+#The method will not be callable.
+#Warning: static parameter S does not occur in signature for call at /home/dzea/.julia/v0.3/Rif/src/functions.jl:67.
+#The method will not be callable.
+#
+
 function call{T <: Sexp, S <: Sexp}(f::RFunction,
                                     argkv::Dict{ASCIIString})
     call(f, [], argkv)

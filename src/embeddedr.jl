@@ -16,7 +16,7 @@ const EXPRSXP = uint(20)
 const S4SXP  = uint(25)
 
 
-libri = dlopen(Pkg.dir() * "/Rif/deps/librinterface.so")
+libri = dlopen(Pkg.dir() * "/Rif/deps/librinterface")
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
@@ -61,7 +61,7 @@ function initr()
     end
     rhome = rstrip(readall(`R RHOME`))
     print("Using R_HOME=", rhome, "\n")
-    ENV["R_HOME"] = rhome
+    EnvHash()["R_HOME"] = rhome
     res = ccall(dlsym(libri, :EmbeddedR_init), Int32, ())
     if res == -1
         if ! hasinitargs()
@@ -73,8 +73,10 @@ function initr()
     return res
 end
 
-_RL_INITIALIZED() = ccall( dlsym(libri, :EmbeddedR_isInitialized), Int, () )
-
+macro _RL_INITIALIZED()
+    ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
+          ())    
+end
 
 
 

@@ -2,10 +2,11 @@ module Rif
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.assign, Base.ref,
+import Base.setindex!, Base.getindex,
        Base.convert,
        Base.eltype,
-       Base.length, Base.map
+       Base.length, Base.map,
+       Base.ndims
 
 require("DataFrames")
 import DataFrames.AbstractDataArray
@@ -16,7 +17,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        RArray,
        Sexp, AbstractSexp,
        RDataArray, AbstractRDataArray,
-       ref, assign, map, del,
+       getindex, setindex!, map, del,
        call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
@@ -59,10 +60,10 @@ else
     println("Can't find librinterface.so; attempting to compile...    ")
     println("*********************************************************")
     _do_rebuild = true
-end
+end    
 if _do_rebuild
     cd(_packpath("deps")) do
-    run(`make all`)
+    run(`make all`) 
     end
     println("*********************************************************")
     println("Compiling complete")
@@ -79,7 +80,7 @@ const _rl_map_rtoj = {
     STRSXP => ASCIIString,
     VECSXP => Sexp
                       }
-
+                      
 const _rl_map_jtor = {
     Bool => LGLSXP,
     Int32 => INTSXP,
@@ -147,7 +148,7 @@ type RExpression <: AbstractSexp
     end
     function RExpression(x::Ptr{Void})
         new(x)
-    end
+    end    
 end
 
 type RS4 <: AbstractSexp
@@ -159,7 +160,7 @@ type RS4 <: AbstractSexp
 
     function RS4(x::Sexp)
         new(x)
-    end
+    end    
 end
 
 
@@ -178,7 +179,7 @@ const _rl_dispatch = {
     }
 
 function _factory(c_ptr::Ptr{Void})
-    rtype::Uint =  @_RL_TYPEOFR(c_ptr)
+    rtype::Int =  @_RL_TYPEOFR(c_ptr)
     if rtype == NILSXP
         return None
     end
@@ -194,7 +195,7 @@ function _factory(c_ptr::Ptr{Void})
 end
 
 ## FIXME: not working
-## conversions
+## conversions 
 # scalars
 for t = (Bool, Int32, Float64, ASCIIString)
     @eval begin
@@ -239,7 +240,7 @@ function parseR(x::ASCIIString)
                   (Ptr{Uint8},),
                   x)
     if c_ptr == C_NULL
-        if ! bool( _RL_INITIALIZED() )
+        if ! bool(@_RL_INITIALIZED)
             error("R is not initialized")
         end
         error("Error evaluating the R expression.")
@@ -275,7 +276,7 @@ macro RINIT(argv::Vector{ASCIIString})
     # initialize embedded R
     initr()
 end
-
+    
 #macro R_str(code::ASCIIString)
 #    ## R must be initialized (macro RINIT), or the call to parseR will fail
 #    e = parseR(code)
