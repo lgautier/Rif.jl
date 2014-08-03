@@ -1,4 +1,6 @@
 
+using Base.EnvHash
+
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
