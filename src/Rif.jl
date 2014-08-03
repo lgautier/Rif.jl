@@ -6,7 +6,7 @@ import Base.setindex!, Base.getindex,
        Base.convert,
        Base.eltype,
        Base.length, Base.map,
-       Base.ndims
+       Base.ndims, Base.EnvHash
 
 require("DataFrames")
 import DataFrames.AbstractDataArray
