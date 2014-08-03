@@ -16,7 +16,7 @@ type REnvironment <: AbstractSexp
     end    
 end
 
-function ref(x::REnvironment, i::ASCIIString)
+function getindex(x::REnvironment, i::ASCIIString)
     c_ptr = @librinterface_getvalue Ptr{Void} SexpEnvironment x i
     return _factory(c_ptr)
 end
