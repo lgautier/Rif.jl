@@ -21,7 +21,7 @@ function getindex(x::REnvironment, i::ASCIIString)
     return _factory(c_ptr)
 end
 
-function assign{T <: AbstractSexp}(x::REnvironment, val::T, i::ASCIIString)
+function setindex!{T <: AbstractSexp}(x::REnvironment, val::T, i::ASCIIString)
     res = @librinterface_setvalue Ptr{Void} SexpEnvironment x i val
     return res
 end

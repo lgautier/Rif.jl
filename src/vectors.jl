@@ -167,7 +167,7 @@ for t = ((Bool, :SexpBoolVector),
          (Int32, :SexpIntVector),
          (Float64, :SexpDoubleVector))
     @eval begin
-        # ref with Int64
+        # getindex with Int64
         function getindex(x::RArray{$t[1], 1}, i::Int64)
             i = int32(i)
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
@@ -178,7 +178,7 @@ for t = ((Bool, :SexpBoolVector),
             res = @librinterface_getbyname $(t[1]) $(t[2]) x name
             return res
         end
-        # ref with Int32
+        # getindex with Int32
         function getindex(x::RArray{$t[1], 1}, i::Int32)
             res = @librinterface_getitem $(t[1]) $(t[2]) x i
             return res
@@ -187,7 +187,7 @@ for t = ((Bool, :SexpBoolVector),
             res = @librinterface_getbyname $(t[1]) $(t[2]) x name
             return res
         end
-        # assign with Int64
+        # setindex with Int64
         function setindex!(x::RArray{$t[1], 1}, val::$t[1], i::Int64)
             i = int32(i)
             res = @librinterface_setitem $(t[1]) $(t[2]) x i val
@@ -198,7 +198,7 @@ for t = ((Bool, :SexpBoolVector),
             res = @librinterface_setbyname $(t[1]) $(t[2]) x i name
             return res
         end
-        # assign with Int32
+        # setindex with Int32
         function setindex!(x::RArray{$t[1], 1}, val::$t[1], i::Int32)
             res = @librinterface_setitem $(t[1]) $(t[2]) x i val
             return res
@@ -240,26 +240,26 @@ for t = ((Bool, :SexpBoolVectorMatrix),
          (Int32, :SexpIntVectorMatrix),
          (Float64, :SexpDoubleVectorMatrix))
     @eval begin
-        # ref with Int64
+        # getindex with Int64
         function getindex(x::RArray{$t[1], 2}, i::Int64, j::Int64)
             i = int32(i)
             j = int32(j)
             res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
             return res
         end
-        # ref with Int32
+        # getindex with Int32
         function getindex(x::RArray{$t[1], 2}, i::Int32, j::Int32)
             res = @librinterface_getitem2 $(t[1]) $(t[2]) x i j
             return res
         end
-        # assign with Int64
+        # setindex with Int64
         function setindex!(x::RArray{$t[1], 2}, val::$t[1], i::Int64, j::Int64)
             i = int32(i)
             j = int32(j)
             res = @librinterface_setitem2 $(t[1]) $(t[2]) x i j val
             return res
         end
-        # assign with Int32
+        # setindex with Int32
         function setindex!(x::RArray{$t[1], 2}, val::$t[1], i::Int32, j::Int32)
             res = @librinterface_setitem2 $(t[1]) $(t[2]) x i j val
             return res
@@ -312,11 +312,11 @@ function getindex(x::RArray{AbstractSexp, 1}, name::ASCIIString)
 end
 
 
-function assign{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, i::Int32)
+function setindex!{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, i::Int32)
     res = @librinterface_setbyname Ptr{Void} SexpVecVector x i val
     return res
 end
-function assign{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, name::ASCIIString)
+function setindex!{T <: AbstractSexp}(x::RArray{AbstractSexp}, val::T, name::ASCIIString)
     res = @librinterface_setbyname Ptr{Void} SexpVecVector x name val
     return res
 end
