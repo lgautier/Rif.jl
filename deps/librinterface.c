@@ -208,7 +208,7 @@ EmbeddedR_init(void) {
 //   rl_basic_word_break_characters = rl_basic;
 // #endif
   /* */
-  errMessage_SEXP = findVar(install("geterrmessage"),
+  errMessage_SEXP = findVar(Rf_install("geterrmessage"),
                             R_BaseNamespace);
 
   RStatus |= (RINTERF_INITIALIZED);
@@ -343,6 +343,10 @@ Sexp_evalPromise(const SEXP sexp) {
   }
   SEXP env, sexp_concrete;
   PROTECT(env = PRENV(sexp));
+  if (env == R_NilValue) {
+    UNPROTECT(1);
+    PROTECT(env = R_BaseEnv);
+  }
   PROTECT(sexp_concrete = eval(sexp, env));
   R_PreserveObject(sexp_concrete);
   UNPROTECT(2);
@@ -831,13 +835,6 @@ SexpVecVector_setbyname(SEXP sexp, const char *name, SEXP value) {
   }
 }
 
-SEXP Promise_eval(SEXP sexp) {
-  SEXP res, env;
-  PROTECT(env = PRENV(sexp));
-  PROTECT(res = eval(sexp, env));
-  UNPROTECT(2);
-  return res;
-}
 
 /* Return NULL on failure */
 SEXP
@@ -848,9 +845,9 @@ SexpEnvironment_get(const SEXP envir, const char* symbol) {
   }
   RStatus ^= RINTERF_IDLE;
   SEXP sexp, sexp_ok;
-  PROTECT(sexp = findVar(install(symbol), envir));
+  PROTECT(sexp = findVar(Rf_install(symbol), envir));
   if (TYPEOF(sexp) == PROMSXP) {
-    sexp_ok = Promise_eval(sexp);
+    sexp_ok = Sexp_evalPromise(sexp);
   } else {
     sexp_ok = sexp;
   }
@@ -1031,7 +1028,7 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   }
   SEXP res_ok;
   if (TYPEOF(res_R) == PROMSXP) {
-    res_ok = Promise_eval(res_R);
+    res_ok = Sexp_evalPromise(res_R);
   } else {
     res_ok = res_R;
   }
