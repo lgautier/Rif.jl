@@ -1,4 +1,3 @@
-
 #include("Rif/src/embeddedr.jl")
 #include("Rif/src/sexp.jl")
 
@@ -13,7 +12,20 @@ type REnvironment <: AbstractSexp
 
     function REnvironment(x::Sexp)
         new(x)
-    end    
+    end
+
+end
+
+function convert(::Type{Sexp}, x::REnvironment)
+    return Sexp(x.sexp)
+end
+
+function keys(env::REnvironment)
+    #FIXME: speedup by having r_ls as a global 
+    be = getBaseEnv()
+    r_ls = get(be, "ls")
+    res = Rif.call(r_ls, [], ["envir" => env])
+    return res
 end
 
 function getindex(x::REnvironment, i::ASCIIString)
@@ -35,12 +47,11 @@ function del(x::REnvironment, i::ASCIIString)
     end
 end
 
-import Base.get
 #FIXME: implement get for UTF8 symbols
 function get(environment::REnvironment, symbol::ASCIIString)
     c_ptr = ccall(dlsym(libri, :SexpEnvironment_get), Ptr{Void},
-                 (Ptr{Void}, Ptr{Uint8}),
-                environment.sexp, symbol)
+                  (Ptr{Void}, Ptr{Uint8}),
+                  environment.sexp, symbol)
     # evaluate if promise
     if (@_RL_TYPEOFR(c_ptr)) == PROMSXP
         c_ptr = ccall(dlsym(libri, :Sexp_evalPromise), Ptr{Void},
@@ -61,3 +72,4 @@ function getBaseEnv()
                 ())
     return REnvironment(res)
 end
+

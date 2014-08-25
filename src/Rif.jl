@@ -2,7 +2,7 @@ module Rif
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.setindex!, Base.getindex,
+import Base.setindex!, Base.getindex, Base.get,
        Base.convert,
        Base.eltype,
        Base.length, Base.map,
@@ -18,6 +18,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        Sexp, AbstractSexp,
        RDataArray, AbstractRDataArray,
        getindex, setindex!, map, del,
+       keys,
        call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
@@ -347,6 +348,23 @@ end
 function requireR(name::ASCIIString)
     e = parseR("require(" * name * ")")
     evalR(e)
+end
+
+type RPackage
+    env::REnvironment
+end
+
+function get(rpack::RPackage, symbol::ASCIIString)
+    return get(rpack.env, symbol)
+end
+
+function rimport(name::ASCIIString)
+    requireR(name)
+    be = getBaseEnv()
+    as_environment = get(be, "as.environment")
+    env = call(as_environment, "package:" * name)
+    res = RPackage(env)
+    return res
 end
 
 end
