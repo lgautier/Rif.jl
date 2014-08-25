@@ -362,7 +362,7 @@ function rimport(name::ASCIIString)
     requireR(name)
     be = getBaseEnv()
     as_environment = get(be, "as.environment")
-    env = call(as_environment, "package:" * name)
+    env = call(as_environment, [cR("package:" * name)])
     res = RPackage(env)
     return res
 end
