@@ -30,6 +30,10 @@ end
 
 function getindex(x::REnvironment, i::ASCIIString)
     c_ptr = @librinterface_getvalue Ptr{Void} SexpEnvironment x i
+    if (@_RL_TYPEOFR(c_ptr)) == PROMSXP
+        c_ptr = ccall(dlsym(libri, :Sexp_evalPromise), Ptr{Void},
+                      (Ptr{Void},), c_ptr)
+    end
     return _factory(c_ptr)
 end
 
