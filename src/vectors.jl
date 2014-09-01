@@ -23,7 +23,7 @@ macro librinterface_matrix_new(v, classname, celltype, nx, ny)
         nx::Int64, ny::Int64 = ndims(v)
         c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
                       (Ptr{$celltype}, Int32, Int32),
-                      v, nx, ny)
+                      v, int32(nx), int32(ny))
         obj = new(c_ptr)
         finalizer(obj, librinterface_finalizer)
         obj
@@ -107,7 +107,6 @@ end
 function convert(::Type{Sexp}, x::RArray)
     Sexp(x.sexp)
 end
-
 
 macro librinterface_getitem(returntype, classname, x, i)
     local f = "$(classname)_getitem"
