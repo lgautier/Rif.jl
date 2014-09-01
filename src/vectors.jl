@@ -2,6 +2,9 @@
 macro librinterface_vector_new(v, classname, celltype)
     local f = "$(classname)_new"
     quote
+        if ! isinitialized()
+            initr()
+        end
         c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
                       (Ptr{$celltype}, Int32),
                       v, length(v))
@@ -14,6 +17,9 @@ end
 macro librinterface_matrix_new(v, classname, celltype, nx, ny)
     local f = "$(classname)_new"
     quote
+        if ! isinitialized()
+            initr()
+        end
         nx::Int64, ny::Int64 = ndims(v)
         c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
                       (Ptr{$celltype}, Int32, Int32),
@@ -24,7 +30,7 @@ macro librinterface_matrix_new(v, classname, celltype, nx, ny)
     end    
 end
 
-
+# R array/vector exposed to Julia
 type RArray{T, N} <: AbstractSexp
     sexp::Ptr{Void}
 
@@ -35,7 +41,7 @@ type RArray{T, N} <: AbstractSexp
         end
         new(c_ptr)
     end
-    
+
     function RArray(v::Array{Bool,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
@@ -73,7 +79,7 @@ type RArray{T, N} <: AbstractSexp
         @librinterface_vector_new v_p SexpVecVector Ptr{Void}
     end
 end    
-
+ 
 function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
     error("Not yet implemented")
 end
