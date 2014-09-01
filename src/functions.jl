@@ -15,9 +15,20 @@ function call{U <: ASCIIString}(f::RFunction, argv::Vector,
                                 env::REnvironment)
     argv_p = map((x)->x.sexp, argv)
     argn_p = map((x)->pointer(x.data), argn)
-    c_ptr = ccall(dlsym(libri, :Function_call), Ptr{Void},
-                  (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Uint8}, Ptr{Void}),
-                  f.sexp, argv_p, length(argv), argn_p, env.sexp)
+    c_ptr = ccall(dlsym(libri, :Function_call),
+                  Ptr{Void}, # returns a pointer to an R object
+                  (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Ptr{Uint8}}, Ptr{Void}),
+                  # pointer to the R function
+                  f.sexp,
+                  # array of pointers to R objects as arguments
+                  argv_p,
+                  # number of arguments (length of the arrays above and below)
+                  int32(length(argv)),
+                  # array of names for the arguments
+                  argn_p,
+                  # pointer to an R environment in which the call
+                  # will be evaluated)
+                  env.sexp )
     if c_ptr == C_NULL
         println("*** Call to R function returned NULL.")
         return None
