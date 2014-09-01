@@ -89,7 +89,7 @@ function call(f::RFunction, argv::Vector)
     i::Integer = 1
     while i <= n
         if ! (typeof(argv[i]) <: AbstractSexp)
-            error("Argument $(i) should be a subtype of AbstractSexp/")
+            error("Argument $(i) should be a subtype of AbstractSexp")
         end
         argn[i] = ""
         i += 1
