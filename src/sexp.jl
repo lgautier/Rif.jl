@@ -1,8 +1,8 @@
 
+# Parent class for all R objects exposed
 abstract AbstractSexp
 
-#    sexp::Ptr{Void}
-
+# Unspecified R object
 type Sexp <: AbstractSexp
     sexp::Ptr{Void}
     function Sexp(c_ptr::Ptr{Void})
@@ -67,7 +67,26 @@ function getAttr(sexp::AbstractSexp, name::ASCIIString)
 end
 
 
-
 function convert{T <: Sexp}(::Type{Ptr{Void}}, x::T)
     x.sexp
+end
+
+function convert(::Type{Sexp}, b::Bool)
+    RArray{Bool, 1}(Bool[b])
+end
+
+function convert(::Type{Sexp}, i::Int)
+    RArray{Int32, 1}(Int32[i])
+end
+
+function convert(::Type{Sexp}, f::Number)
+    RArray{Float64, 1}(Float64[f])
+end
+
+function convert(::Type{Sexp}, s::ASCIIString)
+    RArray{ASCIIString, 1}(ASCIIString[s])
+end
+
+function convert{T,N}(::Type{Sexp}, v::Array{T,N})
+    RArray{T, N}(v)
 end
