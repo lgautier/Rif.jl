@@ -406,7 +406,7 @@ function rwrap(packname::ASCIIString)
         initr()
     end
     rpack = rimport(packname)
-    rwrap(rpack.env)
+    rwrap(rpack.env, symbol(packname))
 end
 
 end
