@@ -84,16 +84,10 @@ function names(sexp::RArray)
     return _factory(c_ptr)
 end
 
-function map(sexp::RArray, func::Function)
-    n = length(sexp)
-    res = cell(n)
-    i = 1
-    while i <= n
-        res[i+1] = func(sexp[i])
-        i += 1
-    end
-    res
-end
+
+Base.start(sexp::RArray) = 1
+Base.done(sexp::RArray, state) = length(sexp) == state-1
+Base.next(sexp::RArray, state) = sexp[state], state+1
 
 
 ## function convert(::Type{Array{ASCIIString}}, x::Type{RArray{ASCIIString}})
