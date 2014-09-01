@@ -184,7 +184,11 @@ function _factory(c_ptr::Ptr{Void})
     if rtype == NILSXP
         return None
     end
-    jtype = _rl_dispatch[rtype]
+    if haskey(_rl_dispatch, rtype)
+        jtype = _rl_dispatch[rtype]
+    else
+        jtype = Sexp
+    end
     if jtype == RArray
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
                             (Ptr{Void},), c_ptr)
@@ -350,6 +354,36 @@ function requireR(name::ASCIIString)
     evalR(e)
 end
 
+# Looking at how PyCall did it:
+#    1) a set of Julia reserved words is build
+#    2) build an anonymous module and populate it with the content of the package
+const julia_reserved = Set{ASCIIString}()
+for word in ("while", "if", "for", "try", "return", "break", 
+             "continue", "function", "macro", "quote", "let", "local",
+             "global", "const", "abstract", "typealias", "type",
+             "bitstype", "immutable", "ccall", "do", "module",
+             "baremodule", "using", "import", "export", "importall",
+             "false", "true", "rmember")
+    push!(julia_reserved, word) # construct Set this way for compat with Julia 0.2/0.3
+end
+
+function rwrap(env::REnvironment, mname::Symbol=:__anon__)
+    members = map(k -> (k, env[k]), keys(env))
+    #FIXME: just leaving the keywords out ? A translation scheme would be better
+    filter!(m -> !(m[1] in julia_reserved), members)
+    m = Module(mname)
+    consts = [Expr(:const, Expr(:(=), symbol(x[1]), x[2])) for x in members]
+    exports = try
+                  convert(Vector{Symbol}, env["__all__"])
+              catch
+                  [symbol(x[1]) for x in filter(x -> x[1][1] != '_', members)]
+              end
+    eval(m, Expr(:toplevel, consts..., :(rmember(s) = getindex($(env), s)),
+                 Expr(:export, exports...)))
+    m
+end
+
+
 type RPackage
     env::REnvironment
 end
@@ -365,6 +399,14 @@ function rimport(name::ASCIIString)
     env = call(as_environment, [cR("package:" * name)])
     res = RPackage(env)
     return res
+end
+
+function rwrap(packname::ASCIIString)
+    if ! isinitialized()
+        initr()
+    end
+    rpack = rimport(packname)
+    rwrap(rpack.env)
 end
 
 end
