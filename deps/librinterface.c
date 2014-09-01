@@ -714,7 +714,7 @@ SexpStrVectorMatrix_new(char **v, int nx, int ny) {
 }
 
 SEXP
-SexpIntVector_new(double *v, int n) {
+SexpIntVector_new(int *v, int n) {
   RINTERF_NEWVECTOR(INTEGER_POINTER, NEW_INTEGER(n), int)
 }
 
