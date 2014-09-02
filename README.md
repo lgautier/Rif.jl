@@ -201,7 +201,11 @@ R("set.seed(1)")
 N = 1000
 requireR("GenomicRanges")
 function sampleR(robj, size, replace)
-call(R("sample"), [robj], Rp(["size" => cR(size), "replace" => cR(replace)]))
+    r_sample = R("sample")
+    call(r_sample, 
+         [robj],
+         Rp(["size" => convert(Sexp, size), 
+             "replace" => convert(Sexp, replace)]))
 end
 
 gr = call(R("GRanges"), [],
