@@ -743,7 +743,7 @@ SexpIntVector_ptr(SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
-SexpBoolVector_new(double *v, int n) {
+SexpBoolVector_new(int *v, int n) {
   RINTERF_NEWVECTOR(LOGICAL_POINTER, NEW_LOGICAL(n), int)
 }
 
