@@ -102,3 +102,6 @@ function call(f::RFunction)
     call(f, [], [], ge)
 end
 
+function call(f::RFunction, args...; kwargs...)
+    call(f, args, kwargs)
+end

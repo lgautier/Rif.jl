@@ -14,7 +14,7 @@ import DataFrames.AbstractDataArray
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
-       RArray,
+       RArray, RS4,
        Sexp, AbstractSexp,
        RDataArray, AbstractRDataArray,
        getindex, setindex!, map, del,
@@ -79,8 +79,7 @@ const _rl_map_rtoj = {
     INTSXP => Int32,
     REALSXP => Float64,
     STRSXP => ASCIIString,
-    VECSXP => Sexp
-                      }
+    VECSXP => Sexp }
                       
 const _rl_map_jtor = {
     Bool => LGLSXP,
@@ -357,32 +356,29 @@ end
 # Looking at how PyCall did it:
 #    1) a set of Julia reserved words is build
 #    2) build an anonymous module and populate it with the content of the package
-const julia_reserved = Set{ASCIIString}()
-for word in ("while", "if", "for", "try", "return", "break", 
-             "continue", "function", "macro", "quote", "let", "local",
-             "global", "const", "abstract", "typealias", "type",
-             "bitstype", "immutable", "ccall", "do", "module",
-             "baremodule", "using", "import", "export", "importall",
-             "false", "true", "rmember")
-    push!(julia_reserved, word) # construct Set this way for compat with Julia 0.2/0.3
-end
+const julia_reserved =
+    Set{ASCIIString}(("while", "if", "for", "try", "return", "break", 
+                      "continue", "function", "macro", "quote", "let", "local",
+                      "global", "const", "abstract", "typealias", "type",
+                      "bitstype", "immutable", "ccall", "do", "module",
+                      "baremodule", "using", "import", "export", "importall",
+                      "false", "true", "rmember"))
 
-function rwrap(env::REnvironment, mname::Symbol=:__anon__)
+# Build a Julia package-like namespace/object from an environment
+function rwrap(env::REnvironment,
+               packname::Symbol=:__rpack__)
     members = map(k -> (k, env[k]), keys(env))
     #FIXME: just leaving the keywords out ? A translation scheme would be better
     filter!(m -> !(m[1] in julia_reserved), members)
-    m = Module(mname)
+    #FIXME: Julia concrete classes are final, so no way to
+    #       type this as an "R Module" ?
+    m = Module(packname)
     consts = [Expr(:const, Expr(:(=), symbol(x[1]), x[2])) for x in members]
-    exports = try
-                  convert(Vector{Symbol}, env["__all__"])
-              catch
-                  [symbol(x[1]) for x in filter(x -> x[1][1] != '_', members)]
-              end
+    exports = [symbol(x[1]) for x in members]
     eval(m, Expr(:toplevel, consts..., :(rmember(s) = getindex($(env), s)),
                  Expr(:export, exports...)))
     m
 end
-
 
 type RPackage
     env::REnvironment
@@ -406,7 +402,14 @@ function rwrap(packname::ASCIIString)
         initr()
     end
     rpack = rimport(packname)
-    rwrap(rpack.env, symbol(packname))
+    rwrap(rpack.env,
+          symbol(packname))
+end
+
+function convert(::Type{Function}, rfunc::RFunction)
+    function fn(args...; kwargs...)
+        call(rfunc, rfunc, args...; kwargs...)
+    end
 end
 
 end
