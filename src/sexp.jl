@@ -87,6 +87,11 @@ function convert(::Type{Sexp}, s::ASCIIString)
     RArray{ASCIIString, 1}(ASCIIString[s])
 end
 
+function convert{T <: AbstractSexp}(::Type{Sexp}, o::T)
+    Sexp(o.sexp)
+end
+
 function convert{T,N}(::Type{Sexp}, v::Array{T,N})
     RArray{T, N}(v)
 end
+
