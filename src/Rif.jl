@@ -2,10 +2,11 @@ module Rif
 
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
-import Base.assign, Base.ref,
+import Base.setindex!, Base.getindex, Base.get,
        Base.convert,
        Base.eltype,
-       Base.length, Base.map
+       Base.length, Base.map,
+       Base.ndims, Base.EnvHash
 
 require("DataFrames")
 import DataFrames.AbstractDataArray
@@ -13,10 +14,11 @@ import DataFrames.AbstractDataArray
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        REnvironment, RFunction,
-       RArray,
+       RArray, RS4,
        Sexp, AbstractSexp,
        RDataArray, AbstractRDataArray,
-       ref, assign, map, del,
+       getindex, setindex!, map, del,
+       keys,
        call, names, ndims,
        convert,
        getGlobalEnv, getBaseEnv,
@@ -77,8 +79,7 @@ const _rl_map_rtoj = {
     INTSXP => Int32,
     REALSXP => Float64,
     STRSXP => ASCIIString,
-    VECSXP => Sexp
-                      }
+    VECSXP => Sexp }
                       
 const _rl_map_jtor = {
     Bool => LGLSXP,
@@ -182,7 +183,11 @@ function _factory(c_ptr::Ptr{Void})
     if rtype == NILSXP
         return None
     end
-    jtype = _rl_dispatch[rtype]
+    if haskey(_rl_dispatch, rtype)
+        jtype = _rl_dispatch[rtype]
+    else
+        jtype = Sexp
+    end
     if jtype == RArray
         ndims::Int =  ccall(dlsym(libri, :Sexp_ndims), Int,
                             (Ptr{Void},), c_ptr)
@@ -239,7 +244,7 @@ function parseR(x::ASCIIString)
                   (Ptr{Uint8},),
                   x)
     if c_ptr == C_NULL
-        if ! bool( _RL_INITIALIZED() )
+        if ! bool(@_RL_INITIALIZED)
             error("R is not initialized")
         end
         error("Error evaluating the R expression.")
@@ -346,6 +351,65 @@ end
 function requireR(name::ASCIIString)
     e = parseR("require(" * name * ")")
     evalR(e)
+end
+
+# Looking at how PyCall did it:
+#    1) a set of Julia reserved words is build
+#    2) build an anonymous module and populate it with the content of the package
+const julia_reserved =
+    Set{ASCIIString}(("while", "if", "for", "try", "return", "break", 
+                      "continue", "function", "macro", "quote", "let", "local",
+                      "global", "const", "abstract", "typealias", "type",
+                      "bitstype", "immutable", "ccall", "do", "module",
+                      "baremodule", "using", "import", "export", "importall",
+                      "false", "true", "rmember"))
+
+# Build a Julia package-like namespace/object from an environment
+function rwrap(env::REnvironment,
+               packname::Symbol=:__rpack__)
+    members = map(k -> (k, env[k]), keys(env))
+    #FIXME: just leaving the keywords out ? A translation scheme would be better
+    filter!(m -> !(m[1] in julia_reserved), members)
+    #FIXME: Julia concrete classes are final, so no way to
+    #       type this as an "R Module" ?
+    m = Module(packname)
+    consts = [Expr(:const, Expr(:(=), symbol(x[1]), x[2])) for x in members]
+    exports = [symbol(x[1]) for x in members]
+    eval(m, Expr(:toplevel, consts..., :(rmember(s) = getindex($(env), s)),
+                 Expr(:export, exports...)))
+    m
+end
+
+type RPackage
+    env::REnvironment
+end
+
+function get(rpack::RPackage, symbol::ASCIIString)
+    return get(rpack.env, symbol)
+end
+
+function rimport(name::ASCIIString)
+    requireR(name)
+    be = getBaseEnv()
+    as_environment = get(be, "as.environment")
+    env = call(as_environment, [cR("package:" * name)])
+    res = RPackage(env)
+    return res
+end
+
+function rwrap(packname::ASCIIString)
+    if ! isinitialized()
+        initr()
+    end
+    rpack = rimport(packname)
+    rwrap(rpack.env,
+          symbol(packname))
+end
+
+function convert(::Type{Function}, rfunc::RFunction)
+    function fn(args...; kwargs...)
+        call(rfunc, rfunc, args...; kwargs...)
+    end
 end
 
 end

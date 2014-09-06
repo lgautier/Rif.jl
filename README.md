@@ -23,12 +23,11 @@ Build and install
 This is a valid Julia package. Once you have all the METADATA.jl jazz for Julia packages sorted out
 (exercise left to the reader), installing a building will be done with:
 ```
-julia> require("pkg")
 julia> Pkg.add("Rif")
 ```
 Once this is done, in a subsequent Julia process one can just write 
 ```
-julia> require("Rif")
+julia> using Rif
 ```
 The first time it is done, the C part of the package will be compiled against the R
 found in the `$PATH`.
@@ -44,7 +43,7 @@ The package is using an embedded R, which needs to be initalized
 before anything useful can be done.
 
 ```
-require("Rif")
+using Rif
 
 Rif.initr()
 ```
@@ -119,7 +118,6 @@ ge["foo"] = v_r
 letters = Rif.get(ge, "letters")
 ```
 
-
 Functions
 ---------
 
@@ -128,7 +126,7 @@ Functions
 r_date = Rif.get(ge, "date")
 # call it without parameters
 res_date = Rif.call(r_date, [], [], ge)
-res_date[0]
+res_date[1]
 ```
 
 ```
@@ -141,7 +139,7 @@ res_mean = Rif.call(r_mean, [v_r,], ["x",], ge)
 
 # other way to achieve the same:
 res_mean = Rif.call(r_mean, [], ["x" => v_r])
-
+res_mean[1]
 ```
 
 R code in strings
@@ -203,7 +201,11 @@ R("set.seed(1)")
 N = 1000
 requireR("GenomicRanges")
 function sampleR(robj, size, replace)
-call(R("sample"), [robj], Rp(["size" => cR(size), "replace" => cR(replace)]))
+    r_sample = R("sample")
+    call(r_sample, 
+         [robj],
+         Rp(["size" => convert(Sexp, size), 
+             "replace" => convert(Sexp, replace)]))
 end
 
 gr = call(R("GRanges"), [],

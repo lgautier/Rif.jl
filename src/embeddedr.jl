@@ -1,4 +1,3 @@
-
 # FIXME: have a way to get those declarations from C ?
 const NILSXP  = uint(0)
 const SYMSXP  = uint(1)
@@ -73,8 +72,10 @@ function initr()
     return res
 end
 
-_RL_INITIALIZED() = ccall( dlsym(libri, :EmbeddedR_isInitialized), Int, () )
-
+macro _RL_INITIALIZED()
+    ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
+          ())    
+end
 
 
 
