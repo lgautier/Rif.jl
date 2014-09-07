@@ -10,22 +10,34 @@ type RFunction <: AbstractSexp
 
 end
 
-function call{U <: ASCIIString}(f::RFunction, argv::Vector,
-                                argn::Vector{U},
-                                env::REnvironment)
-    argv_p = map((x)->x.sexp, argv)
+
+function call(f::RFunction, args...; kwargs...)
+    argv_unnamed = Any[x for x in args]
+    argn_unnamed = ASCIIString["" for x in args]
+    argv_named = Any[x[2] for x in kwargs]
+    argn_named = ASCIIString[string(x[1]) for x in kwargs]
+    rcall(f,
+          vcat(argv_unnamed, argv_named),
+          vcat(argn_unnamed, argn_named))
+end
+
+
+function rcall{U <: ASCIIString}(f::RFunction, argv::Vector,
+                                 argn::Vector{U},
+                                 env::REnvironment)
+    argv_p = map((x)->convert(Sexp, x).sexp, argv)
     argn_p = map((x)->pointer(x.data), argn)
     c_ptr = ccall(dlsym(libri, :Function_call),
                   Ptr{Void}, # returns a pointer to an R object
-                  (Ptr{Void}, Ptr{Ptr{Void}}, Int32, Ptr{Ptr{Uint8}}, Ptr{Void}),
-                  # pointer to the R function
-                  f.sexp,
-                  # array of pointers to R objects as arguments
-                  argv_p,
-                  # number of arguments (length of the arrays above and below)
-                  int32(length(argv)),
-                  # array of names for the arguments
-                  argn_p,
+                  (Ptr{Void}, # pointer to the R function
+                   Ptr{Ptr{Void}}, # array of pointers to R objects as arguments
+                   Int32, # number of arguments
+                   Ptr{Ptr{Uint8}}, # array of names for the arguments
+                   Ptr{Void}),                  
+                  f.sexp, # pointer to the R function
+                  argv_p, # array of pointers to R objects as arguments
+                  int32(length(argv)), # number of arguments
+                  argn_p, # array of names for the arguments
                   # pointer to an R environment in which the call
                   # will be evaluated)
                   env.sexp )
@@ -37,19 +49,19 @@ function call{U <: ASCIIString}(f::RFunction, argv::Vector,
 end
 
 
-function call{U <: ASCIIString}(f::RFunction, argv::Vector,
-                                argn::Vector{U})
+function rcall{U <: ASCIIString}(f::RFunction, argv::Vector,
+                                 argn::Vector{U})
     ge::REnvironment = getGlobalEnv()
-    call(f, argv, argn, ge)
+    rcall(f, argv, argn, ge)
 end
 
-##function call{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
+##function rcall{T <: Sexp, S <: Sexp}(f::RFunction, argv::Vector{T},
 ##                                    argkv::Dict{ASCIIString, S})
 # Precise signature currently problematic because of too loose
 # inference for composite parametric types.
 # ["A" => RArray, "B" => REnvironment] will be of type Dict{ASCIIString,Any}
 # :/
-function call(f::RFunction, argv::Vector,
+function rcall(f::RFunction, argv::Vector,
               argkv::Dict{ASCIIString})
     ge::REnvironment = getGlobalEnv()
     n_v = length(argv)
@@ -68,40 +80,34 @@ function call(f::RFunction, argv::Vector,
         c_argv[i] = v
         i += 1
     end
-    call(f, c_argv, c_argn, ge)
+    rcall(f, c_argv, c_argn, ge)
 end
 
 ##function call{T <: Sexp, S <: Sexp}(f::RFunction,
 ##                                    argkv::Dict{ASCIIString, S})
 #function call{T <: Sexp, S <: Sexp}(f::RFunction,
-function call(f::RFunction,
+function rcall(f::RFunction,
               argkv::Dict{ASCIIString})
-    call(f, [], argkv)
+    rcall(f, [], argkv)
 end
 
 # Types are invariant in Julia. This prevents us from
 # typing the vector of arguments to something like <: AbstractSexp
 # and force us to run checks explicitly :/
-function call(f::RFunction, argv::Vector)
+function rcall(f::RFunction, argv::Vector)
     ge = getGlobalEnv()
     n::Integer = length(argv)
     argn = Array(ASCIIString, n)
     i::Integer = 1
     while i <= n
-        if ! (typeof(argv[i]) <: AbstractSexp)
-            error("Argument $(i) should be a subtype of AbstractSexp")
-        end
         argn[i] = ""
         i += 1
     end
-    call(f, argv, argn, ge)
+    rcall(f, argv, argn, ge)
 end
 
-function call(f::RFunction)
+function rcall(f::RFunction)
     ge::REnvironment = getGlobalEnv()
-    call(f, [], [], ge)
+    rcall(f, [], [], ge)
 end
 
-function call(f::RFunction, args...; kwargs...)
-    call(f, args, kwargs)
-end
