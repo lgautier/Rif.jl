@@ -25,7 +25,7 @@ This is a valid Julia package. Once you have all the METADATA.jl jazz for Julia 
 ```
 julia> Pkg.add("Rif")
 ```
-Once this is done, in a subsequent Julia process one can just write 
+Once this is done, in a subsequent Julia process one can just write
 ```
 julia> using Rif
 ```
@@ -153,7 +153,7 @@ using Rif
 R("require(cluster)")
 
 # today's date by calling R's date()
-rcall(R("date"))[1]
+Rif.rcall(R("date"))[1]
 
 ```
 
@@ -184,7 +184,7 @@ m = r_base.matrix(r_stats.rnorm(100); nrow=20)
 
 d = r_stats.dist(m)
 hc = r_stats.hclust(d)
-r_graphics.plot(hc; 
+r_graphics.plot(hc;
                 sub=cR(""),
                 xlab=cR(""))
 ```
@@ -210,7 +210,7 @@ r_base = Rif.importr("base")
 r_stats = Rif.importr("stats")
 function sampleR(robj, size, replace)
     r_base.sample(robj;
-		  size=size, 
+		  size=size,
                   replace=replace)
 end
 
@@ -222,7 +222,7 @@ gr = r_gr.GRanges(;
                   strand=sampleR(cR("+", "-", "*"), N, true),
                   value=r_stats.rnorm(cR(N), cR(10), cR(3)),
                   score=r_stats.rnorm(cR(N), cR(100), cR(30)),
-                  sample=sampleR(cR("Normal", "Tumor"), N, true), 
+                  sample=sampleR(cR("Normal", "Tumor"), N, true),
                   pair=sampleR(R("letters"), N, true))
 ```
 
@@ -231,18 +231,18 @@ For reference, the original R code:
 set.seed(1)
 N <- 1000
 library(GenomicRanges)
-gr <- GRanges(seqnames = 
+gr <- GRanges(seqnames =
               sample(c("chr1", "chr2", "chr3"),
                        size = N, replace = TRUE),
               IRanges(
                       start = sample(1:300, size = N, replace = TRUE),
                       width = sample(70:75, size = N,replace = TRUE)),
-              strand = sample(c("+", "-", "*"), size = N, 
+              strand = sample(c("+", "-", "*"), size = N,
                               replace = TRUE),
               value = rnorm(N, 10, 3), score = rnorm(N, 100, 30),
-              sample = sample(c("Normal", "Tumor"), 
+              sample = sample(c("Normal", "Tumor"),
               size = N, replace = TRUE),
-              pair = sample(letters, size = N, 
+              pair = sample(letters, size = N,
               replace = TRUE))
 ```
 
@@ -262,15 +262,15 @@ gr = r_gr.(symbol("seqlengths<-"))(gr, RArray{Int32, 1}(Int32[400, 500, 700]))
 # in the meantime the plot _is_ working
 +(x::RArray{Sexp,1}, y::RArray{Sexp,1})=r_base.(symbol("+"))(x,y)
 
-p = ggplot2.ggplot() + 
-  ggbio.layout_circle(gr; geom = "ideo", fill = "gray70", 
+p = ggplot2.ggplot() +
+  ggbio.layout_circle(gr; geom = "ideo", fill = "gray70",
                 radius = 7, trackWidth = 3) +
-  ggbio.layout_circle(gr; geom = "bar", radius = 10, trackWidth = 4, 
+  ggbio.layout_circle(gr; geom = "bar", radius = 10, trackWidth = 4,
                 aes=ggplot2.aes_string(;fill = "score", y = "score")) +
   ggbio.layout_circle(gr; geom = "point", color = "red", radius = 14,
                 trackWidth = 3, grid = true,
                 aes=ggplot2.aes_string(;y = "score")) #+
-  ggbio.layout_circle(gr; geom = "link", (symbol("linked.to")) = "to.gr", 
+  ggbio.layout_circle(gr; geom = "link", (symbol("linked.to")) = "to.gr",
                 radius = 6, trackWidth = 1)
 
 r_base.print(p)
@@ -285,14 +285,14 @@ seqlengths(gr) <- c(400, 500, 700)
 values(gr)$to.gr <- gr[sample(1:length(gr), size = length(gr))]
 idx <- sample(1:length(gr), size = 50)
 gr <- gr[idx]
-ggplot() + 
-  layout_circle(gr, geom = "ideo", fill = "gray70", 
+ggplot() +
+  layout_circle(gr, geom = "ideo", fill = "gray70",
                 radius = 7, trackWidth = 3) +
-  layout_circle(gr, geom = "bar", radius = 10, trackWidth = 4, 
+  layout_circle(gr, geom = "bar", radius = 10, trackWidth = 4,
                 aes(fill = score, y = score)) +
   layout_circle(gr, geom = "point", color = "red", radius = 14,
                 trackWidth = 3, grid = TRUE, aes(y = score)) +
-  layout_circle(gr, geom = "link", linked.to = "to.gr", 
+  layout_circle(gr, geom = "link", linked.to = "to.gr",
                 radius = 6, trackWidth = 1)
 
-```     
+```
