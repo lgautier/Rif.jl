@@ -89,7 +89,7 @@ elt = v_r[1]
 
 Matrices are arrays of dimension 2:
 ```
-v = Int32[1,2,3,4,5,6]
+v = Int32[1 2 3; 4 5 6]
 v_r = Rif.RArray{Int32,2}(v)
 elt = v_r[1,1]
 v_r[1,1] = int32(10)
@@ -125,7 +125,7 @@ Functions
 # get the R function 'date()'
 r_date = Rif.get(ge, "date")
 # call it without parameters
-res_date = Rif.call(r_date, [], [], ge)
+res_date = Rif.rcall(r_date, [], [], ge)
 res_date[1]
 ```
 
@@ -135,10 +135,10 @@ r_mean = Rif.get(ge, "mean")
 v = Int32[1,2,3]
 v_r = Rif.RArray{Int32, 1}(v)
 # call it with a named parameter
-res_mean = Rif.call(r_mean, [v_r,], ["x",], ge)
+res_mean = Rif.rcall(r_mean, [v_r,], ["x",], ge)
 
 # other way to achieve the same:
-res_mean = Rif.call(r_mean, [], ["x" => v_r])
+res_mean = Rif.rcall(r_mean, [], ["x" => v_r])
 res_mean[1]
 ```
 
@@ -153,7 +153,7 @@ using Rif
 R("require(cluster)")
 
 # today's date by calling R's date()
-call(R("date"))[1]
+rcall(R("date"))[1]
 
 ```
 
@@ -172,15 +172,21 @@ require("Rif")
 using Rif
 initr()
 
-m = R("matrix(rnorm(100), nrow=20)")
+r_base = Rif.importr("base")
+r_stats = Rif.importr("stats")
+r_graphics = Rif.importr("graphics")
+
+m = r_base.matrix(r_stats.rnorm(100); nrow=20)
+
 # A Julia matrix mj of type (Array{Float64, 2}) could
 # be used with
 # m = RArray{Float64,2}(mj)
 
-d = call(R("dist"), [m])
-hc = call(R("hclust"), [d])
-call(R("plot"), [hc], 
-       ["sub"=>cR(""), "xlab"=>cR("")])
+d = r_stats.dist(m)
+hc = r_stats.hclust(d)
+r_graphics.plot(hc; 
+                sub=cR(""),
+                xlab=cR(""))
 ```
 ![hctree](hctree.png)
 
@@ -190,7 +196,6 @@ ggbio (in Bioconductor)
 Not-so-simple example, using some of the documentation for `autoplot()` in the Bioconductor package `ggbio`.
 
 ```
-require("Rif")
 using Rif
 initr()
 
@@ -199,25 +204,26 @@ initr()
 ```
 R("set.seed(1)")
 N = 1000
-requireR("GenomicRanges")
+r_gr = Rif.importr("GenomicRanges")
+r_ir = Rif.importr("IRanges")
+r_base = Rif.importr("base")
+r_stats = Rif.importr("stats")
 function sampleR(robj, size, replace)
-    r_sample = R("sample")
-    call(r_sample, 
-         [robj],
-         Rp(["size" => convert(Sexp, size), 
-             "replace" => convert(Sexp, replace)]))
+    r_base.sample(robj;
+		  size=size, 
+                  replace=replace)
 end
 
-gr = call(R("GRanges"), [],
-          ["seqnames" => sampleR(cR("chr1", "chr2", "chr3"), N, true),
-           "ranges" => call(R("IRanges"), [],
-                            Rp(["start" => sampleR(R("1:300"), N, true),
-                                "width" => sampleR(R("70:75"), N, true)])),
-           "strand" => sampleR(cR("+", "-", "*"), N, true),
-           "value" => call(R("rnorm"), [cR(N), cR(10), cR(3)]),
-           "score" => call(R("rnorm"), [cR(N), cR(100), cR(30)]),
-           "sample" => sampleR(cR("Normal", "Tumor"), N, true), 
-           "pair" => sampleR(R("letters"), N, true)])
+gr = r_gr.GRanges(;
+	          seqnames=sampleR(cR("chr1", "chr2", "chr3"), N, true),
+                  ranges=r_ir.IRanges(;
+				      start=sampleR(R("1:300"), N, true),
+                                      width=sampleR(R("70:75"), N, true)),
+                  strand=sampleR(cR("+", "-", "*"), N, true),
+                  value=r_stats.rnorm(cR(N), cR(10), cR(3)),
+                  score=r_stats.rnorm(cR(N), cR(100), cR(30)),
+                  sample=sampleR(cR("Normal", "Tumor"), N, true), 
+                  pair=sampleR(R("letters"), N, true))
 ```
 
 For reference, the original R code:
@@ -242,11 +248,35 @@ gr <- GRanges(seqnames =
 
 
 ```
-requireR("ggbio")
-gr = call(R("seqlength<-"), [gr, RArray{Int32, 1}(Int32[400, 500, 700])])
+ggbio = importr("ggbio")
+gr = r_gr.(symbol("seqlengths<-"))(gr, RArray{Int32, 1}(Int32[400, 500, 700]))
+
+# still working out how match the R string code below with Julia/Rif
+#r_base.(symbol("["))(gr,
+#                     r_base.sample(R("1:" * string(r_base.length(gr)[1]))),
+#                     r_base.length(gr))
+##values(gr)$to.gr <- gr[sample(1:length(gr), size = length(gr))]
+##idx <- sample(1:length(gr), size = 50)
+##gr <- gr[idx]
+
+# in the meantime the plot _is_ working
++(x::RArray{Sexp,1}, y::RArray{Sexp,1})=r_base.(symbol("+"))(x,y)
+
+p = ggplot2.ggplot() + 
+  ggbio.layout_circle(gr; geom = "ideo", fill = "gray70", 
+                radius = 7, trackWidth = 3) +
+  ggbio.layout_circle(gr; geom = "bar", radius = 10, trackWidth = 4, 
+                aes=ggplot2.aes_string(;fill = "score", y = "score")) +
+  ggbio.layout_circle(gr; geom = "point", color = "red", radius = 14,
+                trackWidth = 3, grid = true,
+                aes=ggplot2.aes_string(;y = "score")) #+
+  ggbio.layout_circle(gr; geom = "link", (symbol("linked.to")) = "to.gr", 
+                radius = 6, trackWidth = 1)
+
+r_base.print(p)
 
 ```
-...hmmm... crash with stack smashing detected at this point....
+
 
 R code:
 ```

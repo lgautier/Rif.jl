@@ -27,6 +27,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
        R,
        # utilities (wrapping R functions)
        requireR, cR,
+       importr,
        # macros
        @R, @RINIT, @R_str,
        @_RL_TYPEOFR,
@@ -168,6 +169,7 @@ end
 const _rl_dispatch = {
     CLOSXP => RFunction,
     BUILTINSXP => RFunction,
+    SPECIALSXP => RFunction,
     ENVSXP => REnvironment,
     EXPRSXP => RExpression,
     LGLSXP => RArray,
@@ -365,9 +367,18 @@ const julia_reserved =
                       "false", "true", "rmember"))
 
 # Build a Julia package-like namespace/object from an environment
-function rwrap(env::REnvironment,
-               packname::Symbol=:__rpack__)
-    members = map(k -> (k, env[k]), keys(env))
+function importr(env::REnvironment,
+                 packname::Symbol=:__rpack__)
+    members = map((k) ->
+                  begin
+                      robj = env[k]
+                      if typeof(robj) <: RFunction
+                          (k, convert(Function, robj))
+                      else
+                          (k, env[k])
+                      end
+                  end,
+                  keys(env))
     #FIXME: just leaving the keywords out ? A translation scheme would be better
     filter!(m -> !(m[1] in julia_reserved), members)
     #FIXME: Julia concrete classes are final, so no way to
@@ -375,8 +386,10 @@ function rwrap(env::REnvironment,
     m = Module(packname)
     consts = [Expr(:const, Expr(:(=), symbol(x[1]), x[2])) for x in members]
     exports = [symbol(x[1]) for x in members]
-    eval(m, Expr(:toplevel, consts..., :(rmember(s) = getindex($(env), s)),
-                 Expr(:export, exports...)))
+    eval(m,
+        Expr(:toplevel,
+             consts..., :(rmember(s) = getindex($(env), s)),
+             Expr(:export, exports...)))
     m
 end
 
@@ -388,27 +401,27 @@ function get(rpack::RPackage, symbol::ASCIIString)
     return get(rpack.env, symbol)
 end
 
-function rimport(name::ASCIIString)
+function _rimport(name::ASCIIString)
     requireR(name)
     be = getBaseEnv()
     as_environment = get(be, "as.environment")
-    env = call(as_environment, [cR("package:" * name)])
+    env = rcall(as_environment, [cR("package:" * name)])
     res = RPackage(env)
     return res
 end
 
-function rwrap(packname::ASCIIString)
+function importr(packname::ASCIIString)
     if ! isinitialized()
         initr()
     end
-    rpack = rimport(packname)
-    rwrap(rpack.env,
-          symbol(packname))
+    rpack = _rimport(packname)
+    importr(rpack.env,
+            symbol("R package " * packname))
 end
 
 function convert(::Type{Function}, rfunc::RFunction)
     function fn(args...; kwargs...)
-        call(rfunc, rfunc, args...; kwargs...)
+        call(rfunc, args...; kwargs...)
     end
 end
 
