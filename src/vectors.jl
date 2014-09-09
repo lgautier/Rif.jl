@@ -20,7 +20,7 @@ macro librinterface_matrix_new(v, classname, celltype, nx, ny)
         if ! isinitialized()
             initr()
         end
-        nx::Int64, ny::Int64 = ndims(v)
+        nx::Int64, ny::Int64 = size(v)
         c_ptr = ccall(dlsym(libri, $f), Ptr{Void},
                       (Ptr{$celltype}, Int32, Int32),
                       v, int32(nx), int32(ny))
@@ -46,21 +46,21 @@ type RArray{T, N} <: AbstractSexp
         @librinterface_vector_new v SexpBoolVector Bool
     end
     function RArray(v::Array{Bool,2})
-        nx, ny = ndims(v)
+        nx, ny = size(v)
         @librinterface_matrix_new v SexpBoolVectorMatrix Bool nx ny
     end
     function RArray(v::Array{Int32,1})
         @librinterface_vector_new v SexpIntVector Int32
     end
     function RArray(v::Array{Int32,2})
-        nx, ny = ndims(v)
+        nx, ny = size(v)
         @librinterface_matrix_new v SexpIntVectorMatrix Int32 nx ny
     end
     function RArray(v::Array{Float64,1})
         @librinterface_vector_new v SexpDoubleVector Float64
     end
     function RArray(v::Array{Float64,2})
-        nx, ny = ndims(v)
+        nx, ny = size(v)
         @librinterface_matrix_new v SexpDoubleVectorMatrix Float64 nx ny
     end
     function RArray(v::Array{ASCIIString,1})
@@ -68,7 +68,7 @@ type RArray{T, N} <: AbstractSexp
         @librinterface_vector_new v_p SexpStrVector Ptr{Uint8}
     end
     function RArray(v::Array{ASCIIString,2})
-        nx, ny = ndims(v)
+        nx, ny = size(v)
         v_p = map((x)->pointer(x.data), v)
         @librinterface_matrix_new v_p SexpStrVectorMatrix Ptr{Uint8} nx ny
     end

@@ -89,7 +89,7 @@ elt = v_r[1]
 
 Matrices are arrays of dimension 2:
 ```
-v = Int32[1,2,3,4,5,6]
+v = Int32[1 2 3; 4 5 6]
 v_r = Rif.RArray{Int32,2}(v)
 elt = v_r[1,1]
 v_r[1,1] = int32(10)
