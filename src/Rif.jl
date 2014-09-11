@@ -44,7 +44,8 @@ function _packpath(dir::String)
     return joinpath(Pkg.dir(), "Rif", dir)
 end
 
-dllpath = _packpath("deps", "librinterface.so")
+LibRInterfaceSharedLib = @osx ? "librinterface.dylib" : "librinterface.so"
+dllpath = _packpath("deps", LibRInterfaceSharedLib)
 
 if isfile(dllpath)
     for csourcename in ("librinterface.c", )

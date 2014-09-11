@@ -75,7 +75,7 @@ end
 
 macro _RL_INITIALIZED()
     ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
-          ())    
+          ())
 end
 
 

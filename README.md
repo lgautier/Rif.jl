@@ -153,7 +153,7 @@ using Rif
 R("require(cluster)")
 
 # today's date by calling R's date()
-rcall(R("date"))[1]
+Rif.rcall(R("date"))[1]
 
 ```
 
