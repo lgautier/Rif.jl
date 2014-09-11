@@ -2,6 +2,7 @@ using Base.Test
 using Rif
 
 all_tests = ["environments.jl",
+             "vectors.jl",
              "functions.jl"]
 
 # initialize embedded R
