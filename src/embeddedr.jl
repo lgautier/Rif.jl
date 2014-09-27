@@ -70,13 +70,24 @@ function initr()
             error("Error while initializing R.")
         end
     end
+
+    # start eventloop for non blocking r process
+    timeout = Timer((x)-> R_ProcessEvents())
+    start_timer(timeout,50e-3,50e-3)
+
     return res
 end
+
+
+function R_ProcessEvents()
+    res = ccall(dlsym(libri, :EmbeddedR_ProcessEvents), Ptr{Void}, ())
+    if res == -1
+        error("Error in Process Events")
+    end
+end
+
 
 macro _RL_INITIALIZED()
     ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
           ())
 end
-
-
-
