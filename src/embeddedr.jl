@@ -72,8 +72,10 @@ function initr()
     end
 
     # start eventloop for non blocking r process
-    timeout = Timer((x)-> R_ProcessEvents())
-    start_timer(timeout,50e-3,50e-3)
+    if isinteractive()
+        timeout = Timer((x)-> R_ProcessEvents())
+        start_timer(timeout,50e-3,50e-3)
+    end
 
     return res
 end
