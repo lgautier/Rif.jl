@@ -7,4 +7,4 @@ all:
 	$(CC) -lreadline -shared librinterface.o r_utils.o $(LDFLAGS) -o $(SHAREDLIBNAME)
 
 clean:
-	rm -f *.o *.so
+	rm -f *.o *.so *.dylib
