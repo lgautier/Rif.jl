@@ -206,7 +206,7 @@ end
 # scalars
 for t = (Bool, Int32, Float64, ASCIIString)
     @eval begin
-        function convert(::RArray{$t, 1}, x::$t)
+        function convert(::Type{RArray{$t, 1}}, x::$t)
                 RArray{$t, 1}([x])
         end
     end
@@ -214,10 +214,10 @@ end
 # vectors and matrices
 for t = (Bool, Int32, Float64, ASCIIString)
     @eval begin
-        function convert(::RArray{$t, 1}, x::Array{$t, 1})
+        function convert(::Type{RArray{$t, 1}}, x::Array{$t, 1})
             RArray{$t, 1}(x)
         end
-        function convert(::RArray{$t, 2}, x::Array{$t, 2})
+        function convert(::Type{RArray{$t, 2}}, x::Array{$t, 2})
             RArray{$t, 2}(x)
         end
     end
