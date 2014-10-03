@@ -253,7 +253,7 @@ EmbeddedR_eval(SEXP expression, SEXP envir) {
   int errorOccurred = 0;
   int i;
   for(i = 0; i < LENGTH(expression); i++) {
-    res = R_tryEval(VECTOR_ELT(expression,0), envir, &errorOccurred);
+    res = R_tryEval(VECTOR_ELT(expression,i), envir, &errorOccurred);
   }
   if (errorOccurred) {
     res = NULL;
