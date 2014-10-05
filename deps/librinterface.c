@@ -7,6 +7,7 @@
 #include <Rversion.h>
 #include <Rembedded.h>
 #include <Rdefines.h>
+#include <R_ext/eventloop.h>
 #include <R_ext/Parse.h>
 // #ifdef HAS_READLINE
 // #include <readline/readline.h>
@@ -351,6 +352,30 @@ Sexp_evalPromise(const SEXP sexp) {
   R_PreserveObject(sexp_concrete);
   UNPROTECT(2);
   return sexp_concrete;
+}
+
+void
+EmbeddedR_ProcessEvents()
+{
+  if (! RINTERF_HASARGSSET()) {
+    printf("R should not process events before being initialized.");
+    return;
+  }
+  if (RINTERF_ISBUSY()) {
+    printf("Concurrent access to R is not allowed.");
+    return;
+  }
+  // setlock
+  RStatus = RStatus | RINTERF_ISBUSY();
+#if defined(HAVE_AQUA) || (defined(Win32) || defined(Win64))
+  /* Can the call to R_ProcessEvents somehow fail ? */
+  R_ProcessEvents();
+#endif
+#if ! (defined(Win32) || defined(Win64))
+  R_runHandlers(R_InputHandlers, R_checkActivity(0, 1));
+#endif
+  // freelock
+  RStatus = RStatus ^ RINTERF_ISBUSY();
 }
 
 #define STRINGIFY(x) #x
@@ -1040,4 +1065,3 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   UNPROTECT(protect_count);
   return res_ok;
 }
-

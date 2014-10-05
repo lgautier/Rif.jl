@@ -3,36 +3,36 @@ module Rif
 using Base
 #import Base.dlopen, Base.dlsym, Base.length
 import Base.setindex!, Base.getindex, Base.get,
-       Base.convert,
-       Base.eltype,
-       Base.length, Base.map,
-       Base.ndims, Base.EnvHash
+        Base.convert,
+        Base.eltype,
+        Base.length, Base.map,
+        Base.ndims, Base.EnvHash
 
 require("DataFrames")
 import DataFrames.AbstractDataArray
 
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
-       REnvironment, RFunction,
-       RArray, RS4,
-       Sexp, AbstractSexp,
-       RDataArray, AbstractRDataArray,
-       getindex, setindex!, map, del,
-       keys,
-       call, names, ndims,
-       convert,
-       getGlobalEnv, getBaseEnv,
-       parseR, evalR,
-       Rinenv,
-       R,
-       # utilities (wrapping R functions)
-       requireR, cR,
-       importr,
-       # macros
-       @R, @RINIT, @R_str,
-       @_RL_TYPEOFR,
-       # hack
-       Rp
+        REnvironment, RFunction,
+        RArray, RS4,
+        Sexp, AbstractSexp,
+        RDataArray, AbstractRDataArray,
+        getindex, setindex!, map, del,
+        keys,
+        call, names, ndims,
+        convert,
+        getGlobalEnv, getBaseEnv,
+        parseR, evalR,
+        Rinenv,
+        R,
+        # utilities (wrapping R functions)
+        requireR, cR,
+        importr,
+        # macros
+        @R, @RINIT, @R_str,
+        @_RL_TYPEOFR,
+        # hack
+        Rp
 
 _do_rebuild = false
 
@@ -342,13 +342,13 @@ macro R(expression)
 end
 
 function cR(obj...)
-  a = [obj...]
-  t = eltype(a)
-  if t == Int64
-      a = Int32[a...]
-      t = Int32
-  end
-  RArray{t,1}(a)
+      a = [obj...]
+      t = eltype(a)
+      if t == Int64
+          a = Int32[a...]
+          t = Int32
+      end
+      RArray{t,1}(a)
 end
 
 function requireR(name::ASCIIString)

@@ -157,6 +157,16 @@ Rif.rcall(R("date"))[1]
 
 ```
 
+GUI eventloop
+-------------------
+When working with gui windows interactively, it
+makes sure the gui is not being blocked. 
+Especially important for graphic devices.
+
+```
+Rif.GUI()
+```
+
 
 Examples
 ========
