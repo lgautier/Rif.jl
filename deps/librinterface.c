@@ -1,5 +1,6 @@
 /* Copyright - 2012 - Laurent Gautier */
 #include <stdlib.h>
+#include <stdbool.h>
 #include <strings.h>
 #include <R.h>
 #include <Rinternals.h>
@@ -743,7 +744,7 @@ SexpIntVector_ptr(SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
-SexpBoolVector_new(int *v, int n) {
+SexpBoolVector_new(bool *v, int n) {
   RINTERF_NEWVECTOR(LOGICAL_POINTER, NEW_LOGICAL(n), int)
 }
 
@@ -753,7 +754,7 @@ SexpBoolVector_new_nofill(int n) {
 }
 
 SEXP
-SexpBoolVectorMatrix_new(int *v, int nx, int ny) {
+SexpBoolVectorMatrix_new(bool *v, int nx, int ny) {
   int n = nx * ny;
   RINTERF_NEWVECTOR(LOGICAL_POINTER, allocMatrix(LGLSXP, nx, ny), int)
 }
@@ -1040,4 +1041,3 @@ Function_call(SEXP fun_R, SEXP *argv, int argc, char **argn, SEXP env) {
   UNPROTECT(protect_count);
   return res_ok;
 }
-
