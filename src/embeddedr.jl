@@ -71,12 +71,6 @@ function initr()
         end
     end
 
-    # start eventloop for non blocking r process
-    if isinteractive()
-        timeout = Timer((x)-> R_ProcessEvents())
-        start_timer(timeout,50e-3,50e-3)
-    end
-
     return res
 end
 
@@ -88,6 +82,13 @@ function R_ProcessEvents()
     end
 end
 
+function GUI()
+    # start eventloop for non blocking r process
+    if isinteractive()
+        timeout = Timer((x)-> R_ProcessEvents())
+        start_timer(timeout,50e-3,50e-3)
+    end
+end
 
 macro _RL_INITIALIZED()
     ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
