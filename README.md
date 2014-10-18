@@ -8,7 +8,7 @@ R has a wealth of libraries that it would be foolish to ignore
 This packages is here to offer one to play with Julia while
 calling R whenever it has a library that would be needed.
 
-[![Build Status](http://img.shields.io/travis/lgautier/Rif.jl.svg)]
+![Build Status](http://img.shields.io/travis/lgautier/Rif.jl.svg)
 
 Installation
 ============
