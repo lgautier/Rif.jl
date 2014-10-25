@@ -9,6 +9,7 @@ This packages is here to offer one to play with Julia while
 calling R whenever it has a library that would be needed.
 
 ![Build Status](http://img.shields.io/travis/lgautier/Rif.jl.svg)
+[![DataFrames](http://pkg.julialang.org/badges/Rif_release.svg)](http://pkg.julialang.org/?pkg=Rif&ver=release)
 
 Installation
 ============
