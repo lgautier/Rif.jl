@@ -25,11 +25,11 @@ Build and install
 
 This is a valid Julia package. Once you have all the METADATA.jl jazz for Julia packages sorted out
 (exercise left to the reader), installing a building will be done with:
-```
+```julia
 julia> Pkg.add("Rif")
 ```
 Once this is done, in a subsequent Julia process one can just write 
-```
+```julia
 julia> using Rif
 ```
 The first time it is done, the C part of the package will be compiled against the R
@@ -45,14 +45,14 @@ Initialization
 The package is using an embedded R, which needs to be initalized
 before anything useful can be done.
 
-```
+```julia
 using Rif
 
 Rif.initr()
 ```
 
 If needed, the initialization parameters can be specified:
-```
+```julia
 # set initialization parameters for the embedded R
 argv = ["Julia-R", "--slave"]
 # set the parameters
@@ -68,7 +68,7 @@ Vectors and arrays
 
 In R there are no scalars, only vectors.
 
-```
+```julia
 # Use R's c()
 v = Rif.cR(1,2,3)
 
@@ -91,7 +91,7 @@ elt = v_r[1]
 ### Matrices and Arrays
 
 Matrices are arrays of dimension 2:
-```
+```julia
 v = Int32[1 2 3; 4 5 6]
 v_r = Rif.RArray{Int32,2}(v)
 elt = v_r[1,1]
@@ -107,7 +107,7 @@ in environments as well. One can think of them as namespaces.
 When running R interactively, one is normally in the "Global Environment"
 (things are only different when in the debugger).
 
-```
+```julia
 # R's global environment
 ge = Rif.getGlobalEnv()
 # bind the anonymous R object in v_r to the name "foo" in the
@@ -115,7 +115,7 @@ ge = Rif.getGlobalEnv()
 ge["foo"] = v_r
 ```
 
-```
+```julia
 # get an R object, starting the search from a given environment
 # (here from GlobalEnv, so like it would be from the R console)
 letters = Rif.get(ge, "letters")
@@ -124,7 +124,7 @@ letters = Rif.get(ge, "letters")
 Functions
 ---------
 
-```
+```julia
 # get the R function 'date()'
 r_date = Rif.get(ge, "date")
 # call it without parameters
@@ -132,7 +132,7 @@ res_date = Rif.rcall(r_date, [], [], ge)
 res_date[1]
 ```
 
-```
+```julia
 # get the function 'mean()'
 r_mean = Rif.get(ge, "mean")
 v = Int32[1,2,3]
@@ -149,7 +149,7 @@ R code in strings
 -----------------
 
 
-```
+```julia
 using Rif
 
 # load the R package "cluster"
@@ -166,7 +166,7 @@ When working with gui windows interactively, it
 makes sure the gui is not being blocked. 
 Especially important for graphic devices.
 
-```
+```julia
 Rif.GUI()
 ```
 
@@ -180,7 +180,7 @@ Hierarchical clustering
 
 We are using random data so the example is somewhat futile
 
-```
+```julia
 require("Rif")
 using Rif
 initr()
@@ -208,13 +208,13 @@ ggbio (in Bioconductor)
 
 Not-so-simple example, using some of the documentation for `autoplot()` in the Bioconductor package `ggbio`.
 
-```
+```julia
 using Rif
 initr()
 
 ```
 
-```
+```julia
 R("set.seed(1)")
 N = 1000
 r_gr = Rif.importr("GenomicRanges")
@@ -240,7 +240,7 @@ gr = r_gr.GRanges(;
 ```
 
 For reference, the original R code:
-```
+```r
 set.seed(1)
 N <- 1000
 library(GenomicRanges)
@@ -260,7 +260,7 @@ gr <- GRanges(seqnames =
 ```
 
 
-```
+```julia
 ggbio = importr("ggbio")
 gr = r_gr.(symbol("seqlengths<-"))(gr, RArray{Int32, 1}(Int32[400, 500, 700]))
 
@@ -292,7 +292,7 @@ r_base.print(p)
 
 
 R code:
-```
+```r
 require(ggbio)
 seqlengths(gr) <- c(400, 500, 700)
 values(gr)$to.gr <- gr[sample(1:length(gr), size = length(gr))]
