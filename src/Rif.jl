@@ -8,6 +8,7 @@ import Base.setindex!, Base.getindex, Base.get,
         Base.length, Base.map,
         Base.ndims, Base.EnvHash
 
+using Compat
 require("DataFrames")
 import DataFrames.AbstractDataArray
 
@@ -76,20 +77,19 @@ end
 include(_packpath("src","embeddedr.jl"))
 include(_packpath("src", "sexp.jl"))
 
-const _rl_map_rtoj = {
-    LGLSXP => Bool,
-    INTSXP => Int32,
-    REALSXP => Float64,
-    STRSXP => ASCIIString,
-    VECSXP => Sexp }
+const _rl_map_rtoj = @compat Dict{Any, Any}(LGLSXP => Bool,
+                                            INTSXP => Int32,
+                                            REALSXP => Float64,
+                                            STRSXP => ASCIIString,
+                                            VECSXP => Sexp )
 
-const _rl_map_jtor = {
-    Bool => LGLSXP,
-    Int32 => INTSXP,
-    Float64 => REALSXP,
-    ASCIIString => STRSXP,
-    Sexp => VECSXP
-                      }
+const _rl_map_jtor = @compat Dict{Any, Any}(
+                                            Bool => LGLSXP,
+                                            Int32 => INTSXP,
+                                            Float64 => REALSXP,
+                                            ASCIIString => STRSXP,
+                                            Sexp => VECSXP )
+
 include(_packpath("src", "vectors.jl"))
 #FIXME: at some point the content of dataframes.jl will supersede the one
 #       of vectors.jl
@@ -167,7 +167,7 @@ end
 
 
 ## # FIXME: a conversion would be possible ?
-const _rl_dispatch = {
+const _rl_dispatch = @compat Dict{Any, Any}(
     CLOSXP => RFunction,
     BUILTINSXP => RFunction,
     SPECIALSXP => RFunction,
@@ -178,8 +178,7 @@ const _rl_dispatch = {
     REALSXP => RArray,
     STRSXP => RArray,
     VECSXP => RArray,
-    S4SXP => RS4
-    }
+    S4SXP => RS4)
 
 function _factory(c_ptr::Ptr{Void})
     rtype::Int =  @_RL_TYPEOFR(c_ptr)
@@ -317,7 +316,7 @@ function Rinenv(expr::Expr, env::REnvironment)
             eargv[i-1] = elt.value
             i += 1
         end
-        e = Expr(:call, {call, rfunc, eargv, eargn, env}, Any)
+        e = Expr(:call, Any[call, rfunc, eargv, eargn, env], Any)
         return e
     elseif expr.head == :tuple
         #FIXME: can this occur ?
