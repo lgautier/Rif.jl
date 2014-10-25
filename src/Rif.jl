@@ -9,7 +9,8 @@ import Base.setindex!, Base.getindex, Base.get,
         Base.ndims, Base.EnvHash
 
 using Compat
-require("DataFrames")
+
+using DataFrames
 import DataFrames.AbstractDataArray
 
 
