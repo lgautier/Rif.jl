@@ -52,3 +52,31 @@ test_julia_matrix_conversion_and_access(randn(1,1))
 test_julia_matrix_conversion_and_access(randn(2,1))
 test_julia_matrix_conversion_and_access(randn(1,2))
 test_julia_matrix_conversion_and_access(randn(11,9))
+
+
+# R vectors and arrays can have "names"
+
+# First the vectors
+
+# The C API for R has specialized MACRO for names getrnames/setrnames
+# exposes it
+vi2 = Int32[1,2,3]
+rvi2 = Rif.RArray{Int32,1}(vi2)
+@test isequal(None, Rif.getrnames(rvi2))
+Rif.setrnames!(rvi2, Rif.RArray{ASCIIString,1}(ASCIIString["a", "b", "c"]))
+@test isequal("a", Rif.getrnames(rvi2)[1])
+@test isequal("b", Rif.getrnames(rvi2)[2])
+@test isequal("c", Rif.getrnames(rvi2)[3])
+
+# setAttr/getAttr will be equivalent
+vi2 = Int32[1,2,3]
+rvi2 = Rif.RArray{Int32,1}(vi2)
+@test_throws ErrorException Rif.getAttr(rvi2, "names")
+Rif.setAttr!(rvi2, "names",
+             Rif.RArray{ASCIIString,1}(ASCIIString["a", "b", "c"]))
+@test isequal("a", Rif.getAttr(rvi2, "names")[1])
+@test isequal("a", Rif.getrnames(rvi2)[1])
+@test isequal("b", Rif.getAttr(rvi2, "names")[2])
+@test isequal("b", Rif.getrnames(rvi2)[2])
+@test isequal("c", Rif.getAttr(rvi2, "names")[3])
+@test isequal("c", Rif.getrnames(rvi2)[3])

@@ -296,13 +296,22 @@ Sexp_length(const SEXP sexp) {
 
 /* Return NULL on failure */
 SEXP
-Sexp_names(const SEXP sexp) {
+Sexp_get_names(const SEXP sexp) {
   if (! RINTERF_ISREADY()) {
     return NULL;
   }
   SEXP res = GET_NAMES(sexp);
   R_PreserveObject(res);
   return res;
+}
+
+void
+Sexp_set_names(SEXP sexp,
+	   const SEXP sexp_names) {
+  if (! RINTERF_ISREADY()) {
+    return NULL;
+  }
+  SEXP res = SET_NAMES(sexp, sexp_names);
 }
 
 /* Return -1 on failure */
@@ -327,13 +336,23 @@ Sexp_getAttribute(const SEXP sexp,
   if (! RINTERF_ISREADY()) {
     return -1;
   }
-  SEXP res = getAttrib(sexp, Rf_install(name));
+  SEXP res = Rf_getAttrib(sexp, Rf_install(name));
   if (Rf_isNull(res)) {
     res = NULL;
   } else {
     R_PreserveObject(res);
   }
   return res;
+}
+
+void
+Sexp_setAttribute(SEXP sexp,
+		  char *name,
+		  const SEXP sexp_attr) {
+  if (! RINTERF_ISREADY()) {
+    return -1;
+  }
+  Rf_setAttrib(sexp, Rf_install(name), sexp_attr);
 }
 
 /* Return NULL on failure */

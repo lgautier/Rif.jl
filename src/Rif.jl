@@ -21,7 +21,7 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
         RDataArray, AbstractRDataArray,
         getindex, setindex!, map, del,
         keys,
-        call, names, ndims,
+        call, getrnames, setrnames!, ndims,
         convert,
         getGlobalEnv, getBaseEnv,
         parseR, evalR,
@@ -200,6 +200,20 @@ function _factory(c_ptr::Ptr{Void})
     end
     return res
 end
+
+# definition here rather than in sexp.jl because _factory must be defined
+function getAttr(sexp::AbstractSexp, name::ASCIIString)
+    c_ptr =  ccall(dlsym(libri, :Sexp_getAttribute), Ptr{Void},
+                 (Ptr{Void}, Ptr{Uint8}),
+                 sexp.sexp, name)
+    if c_ptr == C_NULL
+        error("No such attribute: ", name)
+    end
+    _factory(c_ptr)
+end
+
+
+
 
 ## FIXME: not working
 ## conversions

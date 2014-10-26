@@ -84,10 +84,31 @@ function RArray{T<:Type{Any}, N<:Integer}(t::T, n::N)
     error("Not yet implemented")
 end
 
-function names(sexp::RArray)
-    c_ptr =  ccall(dlsym(libri, :Sexp_names), Ptr{Void},
+function getrnames(sexp::RArray)
+    c_ptr =  ccall(dlsym(libri, :Sexp_get_names), Ptr{Void},
                    (Ptr{Void},), sexp)
     return _factory(c_ptr)
+end
+
+function setrnames!(sexp::RArray{Int32, 1},
+                    sexp_names::RArray{ASCIIString, 1})
+    c_ptr =  ccall(dlsym(libri, :Sexp_set_names), Ptr{Void},
+                   (Ptr{Void}, Ptr{Void}), sexp, sexp_names)
+end
+function setrnames!(sexp::RArray{Float64, 1},
+                    sexp_names::RArray{ASCIIString, 1})
+    c_ptr =  ccall(dlsym(libri, :Sexp_set_names), Ptr{Void},
+                   (Ptr{Void}, Ptr{Void}), sexp, sexp_names)
+end
+function setrnames!(sexp::RArray{ASCIIString, 1},
+                    sexp_names::RArray{ASCIIString, 1})
+    c_ptr =  ccall(dlsym(libri, :Sexp_set_names), Ptr{Void},
+                   (Ptr{Void}, Ptr{Void}), sexp, sexp_names)
+end
+function setrnames!(sexp::RArray{Bool, 1},
+                    sexp_names::RArray{Bool, 1})
+    c_ptr =  ccall(dlsym(libri, :Sexp_set_names), Ptr{Void},
+                   (Ptr{Void}, Ptr{Void}), sexp, sexp_names)
 end
 
 

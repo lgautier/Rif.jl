@@ -56,14 +56,11 @@ function ndims(sexp::AbstractSexp)
     return res
 end
 
-function getAttr(sexp::AbstractSexp, name::ASCIIString)
-    c_ptr =  ccall(dlsym(libri, :Sexp_getAttribute), Ptr{Void},
-                 (Ptr{Void}, Ptr{Uint8}),
-                 sexp.sexp, name)
-    if c_ptr == C_NULL
-        error("No such attribute: ", name)
-    end
-    Sexp(c_ptr)
+function setAttr!(sexp::AbstractSexp, name::ASCIIString,
+                  sexp_attr::AbstractSexp)
+    c_ptr =  ccall(dlsym(libri, :Sexp_setAttribute), Ptr{Void},
+                 (Ptr{Void}, Ptr{Uint8}, Ptr{Void}),
+                 sexp.sexp, name, sexp_attr.sexp)
 end
 
 
