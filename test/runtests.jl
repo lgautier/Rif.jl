@@ -3,7 +3,8 @@ using Rif
 
 all_tests = ["environments.jl",
              "vectors.jl",
-             "functions.jl"]
+             "functions.jl",
+             "embedded_r.jl"]
 
 # initialize embedded R
 Rif.initr()

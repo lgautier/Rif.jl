@@ -15,7 +15,7 @@ import DataFrames.AbstractDataArray
 
 
 export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
-        REnvironment, RFunction,
+        REnvironment, RExpression, RFunction,
         RArray, RS4,
         Sexp, AbstractSexp,
         RDataArray, AbstractRDataArray,
@@ -269,16 +269,20 @@ function parseR(x::ASCIIString)
     return _factory(c_ptr)
 end
 
-function evalR(x::RExpression)
-    ge = getGlobalEnv()
+function evalR(x::RExpression, env::REnvironment)
     c_ptr = ccall(dlsym(libri, :EmbeddedR_eval),
                   Ptr{Void},
                   (Ptr{Void}, Ptr{Void}),
-                  x.sexp, ge.sexp)
+                  x.sexp, env.sexp)
     if c_ptr == C_NULL
         error("Error evaluating the R expression.")
     end
     return _factory(c_ptr)
+end
+
+function evalR(x::RExpression)
+    env = getGlobalEnv()
+    return evalR(x, env)
 end
 
 function Rinenv(sym::Symbol, env::REnvironment)
