@@ -91,6 +91,6 @@ function GUI()
 end
 
 macro _RL_INITIALIZED()
-    ccall(dlsym(libri, :EmbeddedR_isInitialized), Int,
+    ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32,
           ())
 end
