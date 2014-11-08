@@ -1,4 +1,4 @@
-require("DataFrames")
+using DataFrames
 import DataFrames.AbstractDataArray
 import DataFrames.DataArray
 
