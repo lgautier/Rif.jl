@@ -13,9 +13,9 @@ macro librinterface_vector_new(v, classname, celltype)
     end
 end
 
-_rtype2cconstructor = [Bool => :SexpBoolVector_new,
-                       Int32 => :SexpIntVector_new,
-                       Float64 => :SexpDoubleVector_new]
+_rtype2cconstructor = Dict(Bool => :SexpBoolVector_new,
+                           Int32 => :SexpIntVector_new,
+                           Float64 => :SexpDoubleVector_new)
 
 
 type RDataArray{T, N} <: AbstractRDataArray{T,N}
@@ -78,12 +78,12 @@ type RDataArray{T, N} <: AbstractRDataArray{T,N}
         v_p = map((x)->pointer(x.data), v)
         @librinterface_matrix_new v_p SexpStrVectorMatrix Ptr{Uint8} nx ny
     end
-    function RDataArray{T <: Sexp}(v::DataArray{T,1})
-        #FIXME: add constructor that builds R vectors
-        #       (ideally using conversion functions)
-        v_p = map((x)->pointer(x.sexp), v)
-        @librinterface_vector_new v_p SexpVecVector Ptr{Void}
-    end
+    ## function RDataArray{T <: Sexp}(v::DataArray{T,1})
+    ##     #FIXME: add constructor that builds R vectors
+    ##     #       (ideally using conversion functions)
+    ##     v_p = map((x)->pointer(x.sexp), v)
+    ##     @librinterface_vector_new v_p SexpVecVector Ptr{Void}
+    ## end
 end
 
 

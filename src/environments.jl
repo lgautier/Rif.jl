@@ -24,7 +24,7 @@ function keys(env::REnvironment)
     #FIXME: speedup by having r_ls as a global 
     be = getBaseEnv()
     r_ls = get(be, "ls")
-    res = Rif.rcall(r_ls, [], ["envir" => env])
+    res = Rif.rcall(r_ls, [], Dict("envir" => env))
     return res
 end
 
