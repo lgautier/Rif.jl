@@ -1,5 +1,4 @@
-#include("Rif/src/embeddedr.jl")
-#include("Rif/src/sexp.jl")
+using Compat
 
 type REnvironment <: AbstractSexp
     sexp::Ptr{Void}
@@ -24,7 +23,7 @@ function keys(env::REnvironment)
     #FIXME: speedup by having r_ls as a global 
     be = getBaseEnv()
     r_ls = get(be, "ls")
-    res = Rif.rcall(r_ls, [], Dict("envir" => env))
+    res = Rif.rcall(r_ls, [], @compat Dict("envir" => env))
     return res
 end
 

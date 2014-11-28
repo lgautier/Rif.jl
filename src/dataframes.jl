@@ -1,3 +1,4 @@
+using Compat
 using DataFrames
 import DataFrames.AbstractDataArray
 import DataFrames.DataArray
@@ -13,9 +14,9 @@ macro librinterface_vector_new(v, classname, celltype)
     end
 end
 
-_rtype2cconstructor = Dict(Bool => :SexpBoolVector_new,
-                           Int32 => :SexpIntVector_new,
-                           Float64 => :SexpDoubleVector_new)
+_rtype2cconstructor = @compat Dict(Bool => :SexpBoolVector_new,
+                                   Int32 => :SexpIntVector_new,
+                                   Float64 => :SexpDoubleVector_new)
 
 
 type RDataArray{T, N} <: AbstractRDataArray{T,N}
