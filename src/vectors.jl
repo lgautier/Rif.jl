@@ -72,7 +72,7 @@ type RArray{T, N} <: AbstractSexp
         v_p = map((x)->pointer(x.data), v)
         @librinterface_matrix_new v_p SexpStrVectorMatrix Ptr{Uint8} nx ny
     end
-    function RArray{T <: Sexp}(v::Array{T,1})
+    function RArray{A <: Sexp}(v::Array{A,1})
         #FIXME: add constructor that builds R vectors
         #       (ideally using conversion functions)
         v_p = map((x)->pointer(x.sexp), v)
