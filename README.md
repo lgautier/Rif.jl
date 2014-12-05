@@ -309,3 +309,6 @@ ggplot() +
                 radius = 6, trackWidth = 1)
 
 ```     
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/lgautier/rif.jl/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
