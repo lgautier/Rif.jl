@@ -276,6 +276,7 @@ gr = r_gr.(symbol("seqlengths<-"))(gr, RArray{Int32, 1}(Int32[400, 500, 700]))
 # in the meantime the plot _is_ working
 +(x::RArray{Sexp,1}, y::RArray{Sexp,1})=r_base.(symbol("+"))(x,y)
 
+ggplot2 = importr("ggplot2")
 p = ggplot2.ggplot() + 
   ggbio.layout_circle(gr; geom = "ideo", fill = "gray70", 
                 radius = 7, trackWidth = 3) +
