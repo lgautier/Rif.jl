@@ -309,9 +309,9 @@ void
 Sexp_set_names(SEXP sexp,
 	   const SEXP sexp_names) {
   if (! RINTERF_ISREADY()) {
-    return NULL;
+    return;
   }
-  SEXP res = SET_NAMES(sexp, sexp_names);
+  SET_NAMES(sexp, sexp_names);
 }
 
 /* Return -1 on failure */
@@ -334,7 +334,7 @@ SEXP
 Sexp_getAttribute(const SEXP sexp,
 		  char *name) {
   if (! RINTERF_ISREADY()) {
-    return -1;
+    return NULL;
   }
   SEXP res = Rf_getAttrib(sexp, Rf_install(name));
   if (Rf_isNull(res)) {
@@ -350,7 +350,7 @@ Sexp_setAttribute(SEXP sexp,
 		  char *name,
 		  const SEXP sexp_attr) {
   if (! RINTERF_ISREADY()) {
-    return -1;
+    return;
   }
   Rf_setAttrib(sexp, Rf_install(name), sexp_attr);
 }
@@ -437,10 +437,10 @@ nameIndex(const SEXP sexp, const char *name) {
     encoding = Rf_getCharCE(sexp_item);
     switch (encoding) {
     case CE_UTF8:
-      name_item = translateCharUTF8(sexp_item);
+      name_item = (char *)translateCharUTF8(sexp_item);
       break;
     default:
-      name_item = CHAR(sexp_item);
+      name_item = (char *)CHAR(sexp_item);
       break;
     }
     if (strcmp(name, name_item)) {
@@ -463,7 +463,7 @@ nameIndex(const SEXP sexp, const char *name) {
     return 0;								\
   }									\
   R_len_t i = nameIndex(sexp, name);					\
-  ctype res;								\
+  ctype res = 0;								\
   if (i != R_NaInt) {							\
     res = rpointer(sexp)[i];						\
   } else {								\
@@ -490,10 +490,10 @@ char* SexpStrVector_getitem(const SEXP sexp, int i) {
   cetype_t encoding = Rf_getCharCE(sexp_item);
   switch (encoding) {
   case CE_UTF8:
-    res = translateCharUTF8(sexp_item);
+    res = (char *)translateCharUTF8(sexp_item);
     break;
   default:
-    res = CHAR(sexp_item);
+    res = (char *)CHAR(sexp_item);
     break;
   }
   UNPROTECT(1);
@@ -682,7 +682,6 @@ SexpDoubleVectorMatrix_new(double *v, int nx, int ny) {
 
 SEXP
 SexpDoubleVectorMatrix_new_nofill(int nx, int ny) {
-  int n = nx * ny;
   RINTERF_NEWVECTOR_NOFILL(allocMatrix(REALSXP, nx, ny))
 }
 
@@ -776,7 +775,6 @@ SexpIntVectorMatrix_new(int *v, int nx, int ny) {
 
 SEXP
 SexpIntVectorMatrix_new_nofill(int nx, int ny) {
-  int n = nx * ny;
   RINTERF_NEWVECTOR_NOFILL(allocMatrix(INTSXP, nx, ny))
 }
 
@@ -805,7 +803,6 @@ SexpBoolVectorMatrix_new(bool *v, int nx, int ny) {
 
 SEXP
 SexpBoolVectorMatrix_new_nofill(int nx, int ny) {
-  int n = nx * ny;
   RINTERF_NEWVECTOR_NOFILL(allocMatrix(LGLSXP, nx, ny))
 }
 
