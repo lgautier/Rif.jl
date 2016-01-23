@@ -38,7 +38,7 @@ type RDataArray{T, N} <: AbstractRDataArray{T,N}
         finalizer(obj, librinterface_finalizer)
         obj
     end
-    
+
     function RDataArray(c_ptr::Ptr{Void})
         if _typeofr(c_ptr) != _rl_map_jtor[T]
             error("Incompatible type (expected ", _rl_map_jtor[T],
@@ -48,7 +48,7 @@ type RDataArray{T, N} <: AbstractRDataArray{T,N}
         finalizer(obj, librinterface_finalizer)
         obj
     end
-    
+
     function RDataArray(v::DataArray{Bool,1})
         @librinterface_vector_new v SexpBoolVector Bool
     end
@@ -122,7 +122,7 @@ end
 
 
 convert(::Type{Sexp}, x::AbstractRDataArray) = Sexp(x.sexp)
-    
+
 ## Methods from Sexp
 function named(x::AbstractRDataArray)
     named(convert(Sexp, x))
@@ -235,7 +235,7 @@ function setindex!(x::RDataArray{ASCIIString}, val::ASCIIString, i::Integer)
 end
 
 
-RListType = Union(AbstractSexp, AbstractRDataArray)
+@compat RListType = Union{AbstractSexp, AbstractRDataArray}
 #RListType = Union(AbstractRDataArray)
 
 # list
@@ -262,4 +262,3 @@ function assign{T <: RListType}(x::RDataArray{RListType},
     res = @librinterface_setbyname Ptr{Void} SexpVecVector x name val
     return res
 end
-

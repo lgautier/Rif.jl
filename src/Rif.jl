@@ -39,11 +39,11 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
 
 _do_rebuild = false
 
-function _packpath(dir::String, name::String)
+@compat function _packpath(dir::AbstractString, name::AbstractString)
     return joinpath(Pkg.dir(), "Rif", dir, name)
 end
 
-function _packpath(dir::String)
+@compat function _packpath(dir::AbstractString)
     return joinpath(Pkg.dir(), "Rif", dir)
 end
 

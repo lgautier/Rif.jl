@@ -11,7 +11,7 @@ type Sexp <: AbstractSexp
         obj
     end
 end
-    
+
 macro _RL_TYPEOFR(c_ptr)
     quote
         ccall(dlsym(libri, :Sexp_typeof), Int,
@@ -21,13 +21,13 @@ end
 
 
 #FIXME: is there any user for this in the end ?
-RVectorTypes = Union(Bool, Int32, Float64, ASCIIString)
+@compat RVectorTypes = Union{Bool, Int32, Float64, ASCIIString}
 
 function librinterface_finalizer(sexp::AbstractSexp)
     ccall(dlsym(libri, :R_ReleaseObject), Void,
           (Ptr{Void},), sexp)
 end
-    
+
 function named(sexp::AbstractSexp)
     res =  ccall(dlsym(libri, :Sexp_named), Int,
                  (Ptr{Void},), sexp)
@@ -91,4 +91,3 @@ end
 function convert{T,N}(::Type{Sexp}, v::Array{T,N})
     RArray{T, N}(v)
 end
-
