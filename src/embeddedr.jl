@@ -16,7 +16,7 @@
 @compat const S4SXP  = UInt(25)
 
 
-libri = Libdl.dlopen(dirname(@__FILE__) * "../deps/librinterface")
+libri = Libdl.dlopen(dirname(@__FILE__) * "/../deps/librinterface")
 
 function isinitialized()
     res = ccall(dlsym(libri, :EmbeddedR_isInitialized), Int32, ())
