@@ -40,11 +40,11 @@ export initr, isinitialized, isbusy, hasinitargs, setinitargs, getinitargs,
 _do_rebuild = false
 
 @compat function _packpath(dir::AbstractString, name::AbstractString)
-    return joinpath(Pkg.dir(), "Rif", dir, name)
+    return joinpath(dirname(@__FILE__), "..", dir, name)
 end
 
 @compat function _packpath(dir::AbstractString)
-    return joinpath(Pkg.dir(), "Rif", dir)
+    return joinpath(dirname(@__FILE__), "..", dir)
 end
 
 LibRInterfaceSharedLib = @osx ? "librinterface.dylib" : "librinterface.so"

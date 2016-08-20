@@ -1,23 +1,16 @@
-language: cpp
-compiler:
-    - gcc
-    - clang
+language: julia
+julia:
+    - 0.4
+    - 0.5
+    - nightly
 notifications:
     email: true
-env:
-  matrix:
-    - JULIAVERSION="juliareleases"
-    - JULIAVERSION="julianightlies"
 before_install:
-    - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-    - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
     - sudo apt-get update -qq -y
-    - sudo apt-get install git libpcre3-dev julia r-base r-base-dev -y
-    - git config --global user.name "Travis User"
-    - git config --global user.email "travis@example.net"
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-script:
-    - julia -e 'Pkg.init(); Pkg.clone(pwd())'
-    - julia -e 'Pkg.test("Rif")'
-    - if [ $JULIAVERSION = "julianightlies" ]; then julia --code-coverage test/runtests.jl; fi
-    - if [ $JULIAVERSION = "juliareleases" ]; then julia test/runtests.jl; fi
+    - sudo apt-get install r-base r-base-dev -y
+#script: # use the default script setting which is equivalent to the following
+#    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+#    - julia -e 'Pkg.init(); Pkg.clone(pwd())'
+#    - julia -e 'Pkg.test("Rif")'
+#    - if [ $JULIAVERSION = "julianightlies" ]; then julia --code-coverage test/runtests.jl; fi
+#    - if [ $JULIAVERSION = "juliareleases" ]; then julia test/runtests.jl; fi
