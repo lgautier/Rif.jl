@@ -1,3 +1,8 @@
+This package was the first Julia->R bridge. Its development stopped a long time ago.
+Check in Julia users forums what is the currently preferred way to call R from Julia.
+
+
+
 ===========================
 Interface to the R language
 ===========================
